@@ -1,0 +1,55 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { kvSet } from '@/lib/kv'
+
+export async function POST(req: NextRequest) {
+  const body = await req.json()
+
+  // MercadoPago envia o ID do pagamento
+  const paymentId = body?.data?.id
+  if (!paymentId || body?.type !== 'payment') {
+    return NextResponse.json({ ok: true })
+  }
+
+  // Busca detalhes do pagamento
+  const res = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+    headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` },
+  })
+  const payment = await res.json()
+
+  if (payment.status !== 'approved') {
+    return NextResponse.json({ ok: true })
+  }
+
+  // external_reference = "discord-{userId}"
+  const ref: string = payment.external_reference ?? ''
+  const match = ref.match(/^discord-(\d+)$/)
+  if (!match) {
+    return NextResponse.json({ ok: true })
+  }
+
+  const discordUserId = match[1]
+  const roleId = process.env.DISCORD_VIP_ROLE_ID!
+
+  // Adiciona cargo VIP no Discord
+  await fetch(
+    `https://discord.com/api/v10/guilds/${process.env.DISCORD_GUILD_ID}/members/${discordUserId}/roles/${roleId}`,
+    {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+    }
+  )
+
+  // Salva vencimento (30 dias) no Redis
+  const expiresAt = new Date()
+  expiresAt.setDate(expiresAt.getDate() + 30)
+  await kvSet(`vip:${discordUserId}`, JSON.stringify({
+    expiresAt: expiresAt.toISOString().split('T')[0],
+    roleId,
+  }))
+
+  console.log(`[webhook] VIP ativado: ${discordUserId} até ${expiresAt.toISOString().split('T')[0]}`)
+  return NextResponse.json({ ok: true })
+}

@@ -1,0 +1,123 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* ─── Existing utilities ─── */
+@layer utilities {
+  .glow-yellow {
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.25);
+  }
+  .glow-green {
+    box-shadow: 0 0 30px rgba(0, 155, 58, 0.25);
+  }
+  .glow-yellow-strong {
+    box-shadow: 0 0 40px rgba(255, 215, 0, 0.45), 0 0 80px rgba(255, 215, 0, 0.15);
+  }
+  .text-shadow {
+    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+  }
+  .text-glow-yellow {
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.75), 0 0 50px rgba(255, 215, 0, 0.35);
+  }
+  .text-glow-green {
+    text-shadow: 0 0 20px rgba(0, 155, 58, 0.75), 0 0 45px rgba(0, 155, 58, 0.3);
+  }
+  .dot-grid {
+    background-image: radial-gradient(circle, rgba(255, 215, 0, 0.07) 1px, transparent 1px);
+    background-size: 36px 36px;
+  }
+}
+
+/* ─── Scroll reveal system ─── */
+.reveal,
+.reveal-left,
+.reveal-scale {
+  transition: opacity 0.75s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.75s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.reveal       { opacity: 0; transform: translateY(35px); }
+.reveal-left  { opacity: 0; transform: translateX(-50px); }
+.reveal-scale { opacity: 0; transform: scale(0.88); }
+
+.reveal.visible,
+.reveal-left.visible,
+.reveal-scale.visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* Stagger children */
+.reveal-stagger > * {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.reveal-stagger > *:nth-child(1) { transition-delay: 0s; }
+.reveal-stagger > *:nth-child(2) { transition-delay: 0.12s; }
+.reveal-stagger > *:nth-child(3) { transition-delay: 0.24s; }
+.reveal-stagger > *:nth-child(4) { transition-delay: 0.36s; }
+.reveal-stagger > *:nth-child(5) { transition-delay: 0.48s; }
+.reveal-stagger > *:nth-child(6) { transition-delay: 0.60s; }
+.reveal-stagger.visible > * {
+  opacity: 1;
+  transform: none;
+}
+
+/* ─── Button shine on hover ─── */
+.btn-shine {
+  position: relative;
+  overflow: hidden;
+}
+.btn-shine::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent);
+  transition: left 0.55s ease;
+  pointer-events: none;
+}
+.btn-shine:hover::after {
+  left: 150%;
+}
+
+/* ─── Card hover shimmer strip ─── */
+.card-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.card-shimmer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -70%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+  transform: skewX(-15deg);
+  transition: left 0.6s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+.card-shimmer:hover::before {
+  left: 130%;
+}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0A0718;
+}
+::-webkit-scrollbar-thumb {
+  background: #FFD700;
+  border-radius: 3px;
+}
