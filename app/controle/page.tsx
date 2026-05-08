@@ -49,6 +49,9 @@ export default function ControlePage() {
   const [newDays, setNewDays]     = useState(30)
   const [addErr, setAddErr]       = useState('')
   const [busy, setBusy]           = useState<string | null>(null)
+  const [importJson, setImportJson]   = useState('')
+  const [importOpen, setImportOpen]   = useState(false)
+  const [importResult, setImportResult] = useState<string | null>(null)
 
   const loadVips = useCallback(async () => {
     setFetching(true)
@@ -142,6 +145,28 @@ export default function ControlePage() {
       await loadVips()
     } else {
       setAddErr('Erro ao adicionar')
+    }
+    setBusy(null)
+  }
+
+  async function handleImport() {
+    setImportResult(null)
+    let data: any[]
+    try { data = JSON.parse(importJson) } catch { setImportResult('JSON inválido'); return }
+    setBusy('import')
+    const res = await fetch('/api/controle/import', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(data),
+    })
+    const result = await res.json()
+    if (res.ok) {
+      setImportResult(`${result.total} VIPs importados com sucesso`)
+      setImportJson('')
+      setImportOpen(false)
+      await loadVips()
+    } else {
+      setImportResult(result.error ?? 'Erro na importação')
     }
     setBusy(null)
   }
@@ -264,6 +289,45 @@ export default function ControlePage() {
         </button>
         {addErr && <p className="text-red-400 text-sm w-full">{addErr}</p>}
       </form>
+
+      {/* Importar JSON */}
+      <div className="bg-br-dark2 border border-white/10 rounded-xl mb-6 overflow-hidden">
+        <button
+          onClick={() => setImportOpen(o => !o)}
+          className="w-full flex items-center justify-between px-4 py-3 text-sm text-white/60 hover:text-white/90 transition-colors"
+        >
+          <span>Importar backup JSON</span>
+          <span>{importOpen ? '▲' : '▼'}</span>
+        </button>
+        {importOpen && (
+          <div className="px-4 pb-4 flex flex-col gap-3 border-t border-white/10 pt-3">
+            <p className="text-xs text-white/40">Cole o conteúdo do arquivo JSON. Formato esperado: array com campos <code className="text-white/60">id</code> e <code className="text-white/60">vence</code>.</p>
+            <textarea
+              value={importJson}
+              onChange={e => setImportJson(e.target.value)}
+              rows={6}
+              placeholder='[{"id":"385405521215094787","vence":"2026-06-14","nick":"xayxayx"}, ...]'
+              className="bg-br-dark border border-white/15 rounded-lg px-3 py-2 text-xs text-white font-mono
+                         placeholder-white/20 focus:outline-none focus:border-br-yellow/50 resize-y"
+            />
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleImport}
+                disabled={!importJson.trim() || busy === 'import'}
+                className="bg-br-yellow text-black text-sm font-bold px-4 py-2 rounded-lg
+                           hover:brightness-110 transition-all disabled:opacity-50"
+              >
+                {busy === 'import' ? 'Importando...' : 'Importar'}
+              </button>
+              {importResult && (
+                <p className={`text-sm ${importResult.includes('sucesso') ? 'text-green-400' : 'text-red-400'}`}>
+                  {importResult}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Tabela */}
       <div className="bg-br-dark2 border border-white/10 rounded-xl overflow-hidden">
