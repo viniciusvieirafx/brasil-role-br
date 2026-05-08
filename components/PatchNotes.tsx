@@ -85,7 +85,7 @@ export default function PatchNotes({ updates, latestVersion }: PatchNotesProps) 
         </div>
 
         {/* Tag filters */}
-        <div className="flex flex-wrap gap-2 justify-center mb-10 reveal">
+        <div className="flex flex-wrap gap-2 justify-center mb-10">
           <button
             onClick={() => setActiveTag(null)}
             className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${
@@ -121,7 +121,7 @@ export default function PatchNotes({ updates, latestVersion }: PatchNotesProps) 
               const isLatest = i === 0 && !activeTag
 
               return (
-                <div key={update.version} className="reveal sm:pl-16 relative">
+                <div key={update.version} className="sm:pl-16 relative">
                   <div className="absolute left-4 top-6 w-4 h-4 rounded-full border-2 border-br-yellow bg-br-dark2 hidden sm:block z-10">
                     {isLatest && (
                       <span className="absolute inset-0 rounded-full bg-br-yellow/40 animate-ping" />
