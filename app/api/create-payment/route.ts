@@ -36,7 +36,8 @@ export async function POST(_req: NextRequest) {
   const raw = await res.text()
   console.log('[create-payment] MP status:', res.status, 'body:', raw)
 
-  let data: Record<string, unknown>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let data: any
   try { data = JSON.parse(raw) } catch { data = {} }
 
   if (!data.id) {
