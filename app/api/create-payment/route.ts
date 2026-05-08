@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 
-export async function POST(_req: NextRequest) {
-  console.log('[create-payment] função chamada')
+export async function POST(req: NextRequest) {
   const cookieStore = await cookies()
   const discordUserCookie = cookieStore.get('discord_user')
 
@@ -13,7 +12,7 @@ export async function POST(_req: NextRequest) {
   const discordUser = JSON.parse(discordUserCookie.value)
   const idempotencyKey = `brb-${discordUser.id}-${Date.now()}`
 
-  const host = _req.headers.get('host') ?? 'brasil-role-br.com'
+  const host = req.headers.get('host') ?? 'brasil-role-br.com'
   const baseUrl = `https://${host}`
 
   const res = await fetch('https://api.mercadopago.com/v1/payments', {
@@ -33,21 +32,16 @@ export async function POST(_req: NextRequest) {
     }),
   })
 
-  const raw = await res.text()
-  console.log('[create-payment] MP status:', res.status, 'body:', raw)
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let data: any
-  try { data = JSON.parse(raw) } catch { data = {} }
+  const data: any = await res.json()
 
   if (!data.id) {
-    return NextResponse.json({ error: 'Erro ao criar pagamento', mpStatus: res.status, mpBody: raw }, { status: 500 })
+    return NextResponse.json({ error: 'Erro ao criar pagamento' }, { status: 500 })
   }
 
   const qrCode = data.point_of_interaction?.transaction_data?.qr_code
 
   if (!qrCode) {
-    console.error('[create-payment] qr_code ausente na resposta do MP:', data.point_of_interaction)
     return NextResponse.json({ error: 'QR code não gerado pelo Mercado Pago' }, { status: 500 })
   }
 
