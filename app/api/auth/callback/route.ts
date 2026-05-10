@@ -32,6 +32,8 @@ export async function GET(req: NextRequest) {
   const user = await userRes.json()
 
   const cookieStore = await cookies()
+  const origin = cookieStore.get('auth_origin')?.value ?? 'vip'
+
   cookieStore.set('discord_user', JSON.stringify({
     id: user.id,
     username: user.username,
@@ -45,5 +47,6 @@ export async function GET(req: NextRequest) {
     path: '/',
   })
 
-  return NextResponse.redirect(`${baseUrl}#vip`)
+  cookieStore.set('auth_origin', '', { maxAge: 0, path: '/' })
+  return NextResponse.redirect(`${baseUrl}#${origin}`)
 }

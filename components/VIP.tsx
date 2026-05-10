@@ -10,13 +10,19 @@ interface DiscordUser {
   globalName: string | null
 }
 
-type Step = 'login' | 'pay' | 'waiting' | 'paid'
+type Step = 'login' | 'needsVerify' | 'pay' | 'waiting' | 'paid'
 
 const benefitIcons = ['✨', '🪙', '🏆', '👑', '💬', '🎁']
 
-export default function VIP({ initialUser }: { initialUser: DiscordUser | null }) {
+function pickInitialStep(user: DiscordUser | null, verified: boolean): Step {
+  if (!user) return 'login'
+  if (!verified) return 'needsVerify'
+  return 'pay'
+}
+
+export default function VIP({ initialUser, initialVerified }: { initialUser: DiscordUser | null; initialVerified: boolean }) {
   const { t } = useLanguage()
-  const [step, setStep] = useState<Step>(initialUser ? 'pay' : 'login')
+  const [step, setStep] = useState<Step>(pickInitialStep(initialUser, initialVerified))
   const [pixData, setPixData] = useState<{ qrCode: string; paymentId: number } | null>(null)
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -41,6 +47,11 @@ export default function VIP({ initialUser }: { initialUser: DiscordUser | null }
     setLoading(true)
     const res = await fetch('/api/create-payment', { method: 'POST' })
     const data = await res.json()
+    if (res.status === 403 && data.code === 'NOT_VERIFIED') {
+      setStep('needsVerify')
+      setLoading(false)
+      return
+    }
     setPixData({ qrCode: data.qrCode, paymentId: data.paymentId })
     setStep('waiting')
     setLoading(false)
@@ -130,6 +141,33 @@ export default function VIP({ initialUser }: { initialUser: DiscordUser | null }
               </div>
             )}
 
+            {step === 'needsVerify' && initialUser && (
+              <div className="text-center space-y-6 w-full">
+                <div className="flex items-center justify-center gap-3">
+                  {avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={avatarUrl} alt="avatar" className="w-10 h-10 rounded-full" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-br-blue flex items-center justify-center font-bold">
+                      {initialUser.username[0].toUpperCase()}
+                    </div>
+                  )}
+                  <span className="text-gray-300 font-bold">
+                    {initialUser.globalName ?? initialUser.username}
+                  </span>
+                </div>
+                <div className="text-6xl">🔒</div>
+                <h3 className="text-2xl font-bold text-br-yellow">{t.vip.needsVerifyTitle}</h3>
+                <p className="text-gray-300">{t.vip.needsVerifyDesc}</p>
+                <a
+                  href="#verificar"
+                  className="inline-flex items-center justify-center gap-3 bg-br-yellow text-br-dark font-bold px-8 py-4 rounded-xl hover:brightness-110 transition-all w-full text-lg"
+                >
+                  {t.vip.needsVerifyBtn}
+                </a>
+              </div>
+            )}
+
             {step === 'pay' && initialUser && (
               <div className="text-center space-y-6 w-full">
                 <div className="flex items-center justify-center gap-3">
@@ -145,19 +183,12 @@ export default function VIP({ initialUser }: { initialUser: DiscordUser | null }
                     ✓ {initialUser.globalName ?? initialUser.username}
                   </span>
                 </div>
+                <div className="inline-flex items-center gap-2 bg-br-green/10 border border-br-green/40 rounded-full px-3 py-1 text-xs text-br-green font-semibold">
+                  <span>✓</span> {t.vip.verifiedBadge}
+                </div>
                 <div className="text-5xl">💸</div>
                 <h3 className="text-2xl font-bold">{t.vip.payTitle}</h3>
                 <p className="text-gray-400">{t.vip.payDesc}</p>
-                <div className="bg-br-yellow/10 border border-br-yellow/40 rounded-xl px-4 py-3 text-sm text-br-yellow text-left flex gap-2 items-start">
-                  <span className="mt-0.5">⚠️</span>
-                  <span>
-                    {t.vip.payWarning_1}
-                    <strong>{t.vip.payWarning_bold}</strong>
-                    {t.vip.payWarning_2}
-                    <a href="#verificar" className="underline">{t.vip.payWarning_link}</a>
-                    {t.vip.payWarning_3}
-                  </span>
-                </div>
                 <button
                   onClick={handleCreatePayment}
                   disabled={loading}

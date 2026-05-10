@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers'
 import { getUpdates } from '@/lib/get-updates'
+import { isUserVerified } from '@/lib/discord'
 import Navbar from '@/components/Navbar'
 import Hero from '@/components/Hero'
 import About from '@/components/About'
@@ -23,6 +24,8 @@ export default async function Home() {
     ? JSON.parse(discordUserCookie.value)
     : null
 
+  const isVerified = discordUser ? await isUserVerified(discordUser.id) : false
+
   const latestVersion = updates[0]?.version ?? '1.0.0'
 
   return (
@@ -34,8 +37,8 @@ export default async function Home() {
       <Team />
       <VerifiedGroups />
       <PatchNotes updates={updates} latestVersion={latestVersion} />
-      <VerifyVRChat initialUser={discordUser} />
-      <VIP initialUser={discordUser} />
+      <VerifyVRChat initialUser={discordUser} initialVerified={isVerified} />
+      <VIP initialUser={discordUser} initialVerified={isVerified} />
       <Contact />
       <Footer />
     </main>

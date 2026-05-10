@@ -22,6 +22,7 @@ export type Translations = {
     copyBtn: string; copied: string; bioHint: string
     verifyBtn: string; verifying: string; changeUser: string
     doneTitle: string; doneDesc_before: string; doneDesc_bold: string; doneDesc_after: string; doneHint: string
+    alreadyTitle: string; alreadyDesc: string; alreadyVipBtn: string
     errorDefault: string; errorGenDefault: string
   }
   vip: {
@@ -31,8 +32,11 @@ export type Translations = {
     durationNote_before: string; durationNote_after: string
     loginTitle: string; step1Title: string; step1Desc: string; step1Link: string
     step2Title: string; step2Desc: string; loginBtn: string
+    needsVerifyTitle: string; needsVerifyDesc: string; needsVerifyBtn: string
+    verifiedBadge: string
     payTitle: string; payDesc: string
     payWarning_1: string; payWarning_bold: string; payWarning_2: string; payWarning_link: string; payWarning_3: string
+    payCheckbox_1: string; payCheckbox_link: string; payCheckbox_2: string
     payBtn: string; payBtnLoading: string
     waitingTitle: string; waitingDesc: string
     copyPix: string; copiedPix: string; checking: string
@@ -125,6 +129,9 @@ export const translations: Record<Lang, Translations> = {
       doneDesc_bold: 'Verificado',
       doneDesc_after: ' foi ativado no Discord!',
       doneHint: 'Você já pode remover o código da sua bio.',
+      alreadyTitle: 'Você já está verificado!',
+      alreadyDesc: 'Sua conta VRChat já está vinculada e o cargo de Verificado está ativo no Discord.',
+      alreadyVipBtn: 'Ver Benefícios VIP →',
       errorDefault: 'Código não encontrado na bio',
       errorGenDefault: 'Erro ao gerar código',
     },
@@ -151,6 +158,10 @@ export const translations: Record<Lang, Translations> = {
       step2Title: 'Faça login com Discord',
       step2Desc: 'Para vincularmos o cargo automaticamente ao seu perfil.',
       loginBtn: 'Login com Discord',
+      needsVerifyTitle: 'Verifique antes de comprar',
+      needsVerifyDesc: 'Para receber os benefícios VIP, sua conta VRChat precisa estar verificada. Esse passo é obrigatório e leva 1 minuto.',
+      needsVerifyBtn: '→ Verificar VRChat agora',
+      verifiedBadge: 'VRChat verificado',
       payTitle: 'Passo 2: Pagar via PIX',
       payDesc: 'Clique abaixo para gerar seu QR Code PIX de R$ 5,00. O cargo é ativado automaticamente após a confirmação.',
       payWarning_1: 'Para receber os benefícios no mapa, você precisa ',
@@ -158,6 +169,9 @@ export const translations: Record<Lang, Translations> = {
       payWarning_2: ' antes de comprar. Faça isso na seção ',
       payWarning_link: 'Verificar VRChat',
       payWarning_3: ' acima.',
+      payCheckbox_1: 'Confirmo que já realizei a ',
+      payCheckbox_link: 'verificação do VRChat',
+      payCheckbox_2: ' e meu cargo está ativo no servidor.',
       payBtn: 'Gerar QR Code PIX - R$ 5,00',
       payBtnLoading: 'Gerando PIX...',
       waitingTitle: 'Aguardando Pagamento',
@@ -270,6 +284,9 @@ export const translations: Record<Lang, Translations> = {
       doneDesc_bold: 'Verified',
       doneDesc_after: ' role has been activated on Discord!',
       doneHint: 'You can now remove the code from your bio.',
+      alreadyTitle: "You're already verified!",
+      alreadyDesc: 'Your VRChat account is linked and the Verified role is active on Discord.',
+      alreadyVipBtn: 'See VIP Benefits →',
       errorDefault: 'Code not found in bio',
       errorGenDefault: 'Error generating code',
     },
@@ -296,6 +313,10 @@ export const translations: Record<Lang, Translations> = {
       step2Title: 'Login with Discord',
       step2Desc: 'So we can automatically link the role to your profile.',
       loginBtn: 'Login with Discord',
+      needsVerifyTitle: 'Verify before purchasing',
+      needsVerifyDesc: 'To receive VIP benefits, your VRChat account must be verified. This step is required and takes about 1 minute.',
+      needsVerifyBtn: '→ Verify VRChat now',
+      verifiedBadge: 'VRChat verified',
       payTitle: 'Step 2: Pay via PIX',
       payDesc: 'Click below to generate your PIX QR Code of R$ 5.00. The role is activated automatically after confirmation.',
       payWarning_1: 'To receive map benefits, you need to ',
@@ -303,6 +324,9 @@ export const translations: Record<Lang, Translations> = {
       payWarning_2: ' before purchasing. Do this in the ',
       payWarning_link: 'Verify VRChat',
       payWarning_3: ' section above.',
+      payCheckbox_1: 'I confirm that I have completed the ',
+      payCheckbox_link: 'VRChat verification',
+      payCheckbox_2: ' and my role is active in the server.',
       payBtn: 'Generate PIX QR Code - R$ 5.00',
       payBtnLoading: 'Generating PIX...',
       waitingTitle: 'Waiting for Payment',
@@ -415,6 +439,9 @@ export const translations: Record<Lang, Translations> = {
       doneDesc_bold: 'Verificado',
       doneDesc_after: ' fue activado en Discord.',
       doneHint: 'Ya puedes eliminar el código de tu bio.',
+      alreadyTitle: '¡Ya estás verificado!',
+      alreadyDesc: 'Tu cuenta de VRChat ya está vinculada y el rol de Verificado está activo en Discord.',
+      alreadyVipBtn: 'Ver Beneficios VIP →',
       errorDefault: 'Código no encontrado en la bio',
       errorGenDefault: 'Error al generar código',
     },
@@ -441,6 +468,10 @@ export const translations: Record<Lang, Translations> = {
       step2Title: 'Inicia sesión con Discord',
       step2Desc: 'Para vincular el rol automáticamente a tu perfil.',
       loginBtn: 'Login con Discord',
+      needsVerifyTitle: 'Verifica antes de comprar',
+      needsVerifyDesc: 'Para recibir los beneficios VIP, tu cuenta de VRChat debe estar verificada. Este paso es obligatorio y toma 1 minuto.',
+      needsVerifyBtn: '→ Verificar VRChat ahora',
+      verifiedBadge: 'VRChat verificado',
       payTitle: 'Paso 2: Pagar via PIX',
       payDesc: 'Haz clic abajo para generar tu QR Code PIX de R$ 5,00. El rol se activa automáticamente tras la confirmación.',
       payWarning_1: 'Para recibir los beneficios en el mapa, necesitas ',
@@ -448,6 +479,9 @@ export const translations: Record<Lang, Translations> = {
       payWarning_2: ' antes de comprar. Hazlo en la sección ',
       payWarning_link: 'Verificar VRChat',
       payWarning_3: ' arriba.',
+      payCheckbox_1: 'Confirmo que ya realicé la ',
+      payCheckbox_link: 'verificación de VRChat',
+      payCheckbox_2: ' y mi rol está activo en el servidor.',
       payBtn: 'Generar QR Code PIX - R$ 5,00',
       payBtnLoading: 'Generando PIX...',
       waitingTitle: 'Esperando Pago',

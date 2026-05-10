@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { isUserVerified } from '@/lib/discord'
 
 export async function POST(req: NextRequest) {
   const cookieStore = await cookies()
@@ -10,6 +11,13 @@ export async function POST(req: NextRequest) {
   }
 
   const discordUser = JSON.parse(discordUserCookie.value)
+
+  if (!(await isUserVerified(discordUser.id))) {
+    return NextResponse.json(
+      { error: 'Verifique sua conta VRChat antes de comprar VIP', code: 'NOT_VERIFIED' },
+      { status: 403 }
+    )
+  }
   const idempotencyKey = `brb-${discordUser.id}-${Date.now()}`
 
   const host = req.headers.get('host') ?? 'brasil-role-br.com'

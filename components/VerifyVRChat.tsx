@@ -8,9 +8,9 @@ interface DiscordUser {
   globalName: string | null
 }
 
-type Step = 'login' | 'username' | 'code' | 'done'
+type Step = 'login' | 'username' | 'code' | 'done' | 'alreadyVerified'
 
-export default function VerifyVRChat({ initialUser }: { initialUser: DiscordUser | null }) {
+export default function VerifyVRChat({ initialUser, initialVerified }: { initialUser: DiscordUser | null; initialVerified: boolean }) {
   const { t } = useLanguage()
   const [step, setStep] = useState<Step>('login')
   const [vrchatUsername, setVrchatUsername] = useState('')
@@ -20,8 +20,10 @@ export default function VerifyVRChat({ initialUser }: { initialUser: DiscordUser
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
-    if (initialUser) setStep('username')
-  }, [initialUser])
+    if (!initialUser) return
+    if (initialVerified) setStep('alreadyVerified')
+    else setStep('username')
+  }, [initialUser, initialVerified])
 
   const handleStart = async () => {
     if (!vrchatUsername.trim()) return
@@ -80,7 +82,7 @@ export default function VerifyVRChat({ initialUser }: { initialUser: DiscordUser
               <h3 className="text-xl font-bold">{t.verify.loginTitle}</h3>
               <p className="text-gray-400 text-sm">{t.verify.loginDesc}</p>
               <a
-                href="/api/auth/discord"
+                href="/api/auth/discord?from=verificar"
                 className="inline-flex items-center gap-3 bg-[#5865F2] text-white font-bold px-8 py-4 rounded-xl hover:brightness-110 transition-all"
               >
                 <DiscordIcon />
@@ -169,6 +171,20 @@ export default function VerifyVRChat({ initialUser }: { initialUser: DiscordUser
                 {t.verify.doneDesc_after}
               </p>
               <p className="text-gray-500 text-sm">{t.verify.doneHint}</p>
+            </div>
+          )}
+
+          {step === 'alreadyVerified' && (
+            <div className="text-center space-y-5">
+              <div className="text-7xl">✅</div>
+              <h3 className="text-3xl font-bold text-br-green">{t.verify.alreadyTitle}</h3>
+              <p className="text-gray-300">{t.verify.alreadyDesc}</p>
+              <a
+                href="#vip"
+                className="inline-block bg-br-yellow text-br-dark font-bold px-6 py-3 rounded-xl hover:brightness-110 transition-all"
+              >
+                {t.verify.alreadyVipBtn}
+              </a>
             </div>
           )}
 
