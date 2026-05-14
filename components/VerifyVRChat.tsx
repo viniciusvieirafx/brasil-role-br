@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useLanguage } from '@/contexts/LanguageContext'
 
 interface DiscordUser {
@@ -12,6 +13,7 @@ type Step = 'login' | 'username' | 'code' | 'done' | 'alreadyVerified'
 
 export default function VerifyVRChat({ initialUser, initialVerified }: { initialUser: DiscordUser | null; initialVerified: boolean }) {
   const { t } = useLanguage()
+  const router = useRouter()
   const [step, setStep] = useState<Step>('login')
   const [vrchatUsername, setVrchatUsername] = useState('')
   const [code, setCode] = useState('')
@@ -51,6 +53,10 @@ export default function VerifyVRChat({ initialUser, initialVerified }: { initial
     const data = await res.json()
     if (data.verified) {
       setStep('done')
+      router.refresh()
+      setTimeout(() => {
+        document.getElementById('vip')?.scrollIntoView({ behavior: 'smooth' })
+      }, 800)
     } else {
       setErrorMsg(data.error ?? t.verify.errorDefault)
     }

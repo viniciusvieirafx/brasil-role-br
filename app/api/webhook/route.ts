@@ -1,6 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { kvSet } from '@/lib/kv'
 
+const NOTIFY_CHANNEL = '1480918950404423835'
+
+async function notifyVipPurchase(
+  discordUserId: string,
+  amount: number,
+  paymentMethod: string,
+  expiresAt: string,
+) {
+  const memberRes = await fetch(
+    `https://discord.com/api/v10/guilds/${process.env.DISCORD_GUILD_ID}/members/${discordUserId}`,
+    { headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` } },
+  )
+  const member = memberRes.ok ? await memberRes.json() : null
+  const displayName = member?.nick ?? member?.user?.global_name ?? member?.user?.username ?? discordUserId
+
+  const methodLabel: Record<string, string> = {
+    pix: 'PIX',
+    credit_card: 'Cartão de crédito',
+    debit_card: 'Cartão de débito',
+    bank_transfer: 'Transferência',
+  }
+  const method = methodLabel[paymentMethod] ?? paymentMethod
+
+  await fetch(`https://discord.com/api/v10/channels/${NOTIFY_CHANNEL}/messages`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      embeds: [{
+        title: '💎 Novo VIP Ativado',
+        color: 0xFFD700,
+        fields: [
+          { name: '👤 Usuário', value: `${displayName} (<@${discordUserId}>)`, inline: true },
+          { name: '💰 Valor', value: `R$ ${amount.toFixed(2)}`, inline: true },
+          { name: '💳 Pagamento', value: method, inline: true },
+          { name: '📅 Vence em', value: expiresAt, inline: true },
+        ],
+        footer: { text: 'Brasil Role BR · VIP' },
+        timestamp: new Date().toISOString(),
+      }],
+    }),
+  })
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.json()
 
@@ -45,11 +91,16 @@ export async function POST(req: NextRequest) {
   // Salva vencimento (30 dias) no Redis
   const expiresAt = new Date()
   expiresAt.setDate(expiresAt.getDate() + 30)
-  await kvSet(`vip:${discordUserId}`, JSON.stringify({
-    expiresAt: expiresAt.toISOString().split('T')[0],
-    roleId,
-  }))
+  const expiresStr = expiresAt.toISOString().split('T')[0]
+  await kvSet(`vip:${discordUserId}`, JSON.stringify({ expiresAt: expiresStr, roleId }))
 
-  console.log(`[webhook] VIP ativado: ${discordUserId} até ${expiresAt.toISOString().split('T')[0]}`)
+  await notifyVipPurchase(
+    discordUserId,
+    payment.transaction_amount,
+    payment.payment_method_id,
+    expiresStr,
+  )
+
+  console.log(`[webhook] VIP ativado: ${discordUserId} até ${expiresStr}`)
   return NextResponse.json({ ok: true })
 }

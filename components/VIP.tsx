@@ -29,6 +29,13 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
+    setStep(prev => {
+      if (prev === 'waiting' || prev === 'paid') return prev
+      return pickInitialStep(initialUser, initialVerified)
+    })
+  }, [initialUser, initialVerified])
+
+  useEffect(() => {
     if (step !== 'waiting' || !pixData) return
 
     pollRef.current = setInterval(async () => {
