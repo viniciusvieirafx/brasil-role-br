@@ -1,5 +1,33 @@
 [
   {
+    "version": "1.4.0",
+    "date": "2026-06-10",
+    "tags": ["mapa", "pet"],
+    "changes": {
+      "pt": [
+        { "type": "new", "text": "Nova área no mapa: Montanha Esquecida" },
+        { "type": "new", "text": "Dica secreta: Para aqueles que buscam a salvação, as duas águias te mostrarão o caminho" },
+        { "type": "new", "text": "Tema Festa Junina adicionado ao mapa" },
+        { "type": "new", "text": "Início do novo sistema de pets" },
+        { "type": "improve", "text": "Melhoria de performance geral no mapa" }
+      ],
+      "en": [
+        { "type": "new", "text": "New map area: Forgotten Mountain" },
+        { "type": "new", "text": "Secret hint: Those who seek salvation — the two eagles will show you the way" },
+        { "type": "new", "text": "Festa Junina (Brazilian June Festival) theme added to the map" },
+        { "type": "new", "text": "Beginning of the new pet system" },
+        { "type": "improve", "text": "General performance improvements across the map" }
+      ],
+      "es": [
+        { "type": "new", "text": "Nueva área en el mapa: Montaña Olvidada" },
+        { "type": "new", "text": "Pista secreta: Para aquellos que buscan la salvación, las dos águilas te mostrarán el camino" },
+        { "type": "new", "text": "Tema Fiesta Junina añadido al mapa" },
+        { "type": "new", "text": "Inicio del nuevo sistema de mascotas" },
+        { "type": "improve", "text": "Mejoras generales de rendimiento en el mapa" }
+      ]
+    }
+  },
+  {
     "version": "1.3.0",
     "date": "2025-05-05",
     "tags": ["mapa", "vip"],
