@@ -237,6 +237,19 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
             )}
           </div>
         </div>
+
+        {/* Botão de suporte */}
+        <div className="mt-10 text-center">
+          <a
+            href={`https://discord.com/channels/972901887034654770/1488376250496974868`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 border border-white/20 text-gray-300 hover:text-white hover:border-white/40 px-6 py-3 rounded-xl transition-all text-sm"
+          >
+            <span>💬</span>
+            Precisa de ajuda? Fale conosco no Discord
+          </a>
+        </div>
       </div>
     </section>
   )

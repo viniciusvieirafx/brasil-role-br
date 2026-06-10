@@ -1,0 +1,13 @@
+services:
+  - type: worker
+    name: brasil-role-bot
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm run bot
+    envVars:
+      - key: DISCORD_BOT_TOKEN
+        sync: false
+      - key: DISCORD_GUILD_ID
+        sync: false
+      - key: DISCORD_MOD_ROLE_ID
+        sync: false
