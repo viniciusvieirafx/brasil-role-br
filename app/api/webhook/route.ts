@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { kvSet } from '@/lib/kv'
+import { kvGet, kvSet } from '@/lib/kv'
 
 const NOTIFY_CHANNEL = '1480918950404423835'
 
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
   const roleId = process.env.DISCORD_VIP_ROLE_ID!
 
   // Adiciona cargo VIP no Discord
-  await fetch(
+  const roleRes = await fetch(
     `https://discord.com/api/v10/guilds/${process.env.DISCORD_GUILD_ID}/members/${discordUserId}/roles/${roleId}`,
     {
       method: 'PUT',
@@ -87,12 +87,24 @@ export async function POST(req: NextRequest) {
       },
     }
   )
+  if (!roleRes.ok) {
+    const errBody = await roleRes.text().catch(() => '')
+    console.error(`[webhook] FALHA ao adicionar cargo VIP para ${discordUserId}: HTTP ${roleRes.status} ${errBody}`)
+  }
 
-  // Salva vencimento (30 dias) no Redis
+  // Salva vencimento (30 dias) no Redis — limpa optOut para reativar lembretes
   const expiresAt = new Date()
   expiresAt.setDate(expiresAt.getDate() + 30)
   const expiresStr = expiresAt.toISOString().split('T')[0]
-  await kvSet(`vip:${discordUserId}`, JSON.stringify({ expiresAt: expiresStr, roleId }))
+  const existingRaw = await kvGet(`vip:${discordUserId}`)
+  const existing    = existingRaw ? JSON.parse(existingRaw) : {}
+  await kvSet(`vip:${discordUserId}`, JSON.stringify({
+    ...existing,
+    expiresAt:   expiresStr,
+    roleId,
+    optOut:      false,
+    ultimoAviso: undefined,
+  }))
 
   await notifyVipPurchase(
     discordUserId,

@@ -25,7 +25,9 @@ export default function Navbar({ latestVersion }: NavbarProps) {
     { href: '#sobre', label: t.nav.about, badge: false },
     { href: '#equipe', label: t.nav.team, badge: false },
     { href: '#atualizacoes', label: t.nav.updates, badge: hasNew },
+    { href: '#verificar', label: t.nav.verify, badge: false },
     { href: '#vip', label: t.nav.vip, badge: false },
+    { href: '#sorteio', label: t.nav.raffle, badge: false },
     { href: '#contato', label: t.nav.contact, badge: false },
   ]
 

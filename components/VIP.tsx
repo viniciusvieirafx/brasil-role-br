@@ -12,7 +12,7 @@ interface DiscordUser {
 
 type Step = 'login' | 'needsVerify' | 'pay' | 'waiting' | 'paid'
 
-const benefitIcons = ['✨', '🪙', '🏆', '👑', '💬', '🎁']
+const benefitIcons = ['✨', '🪙', '🏆', '👑', '💬', '🎰', '🎁']
 
 function pickInitialStep(user: DiscordUser | null, verified: boolean): Step {
   if (!user) return 'login'

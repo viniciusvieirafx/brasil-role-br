@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   description: 'O maior mapa brasileiro do VRChat — otimizado, cheio de conteúdo e feito para ser o nosso lar. Por MiraNaJanela.',
   openGraph: {
     title: 'Brasil Role BR',
-    description: 'O melhor servidor FiveM do Brasil',
+    description: 'O melhor servidor Brasileiro de VRChat',
     images: ['/cover.png'],
   },
 }

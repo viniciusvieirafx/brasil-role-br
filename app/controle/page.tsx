@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
 
 type VipEntry = {
   discordId:    string
@@ -22,7 +22,34 @@ type Propaganda = {
   notificado: boolean
 }
 
-type Tab = 'vips' | 'propagandas'
+type Tab = 'vips' | 'propagandas' | 'sorteios' | 'grupos'
+
+type GrupoAdmin = {
+  slug: string
+  nome: string
+  canalId: string | null
+  ativo: boolean
+  vipsDisponiveis: number
+  senhaHash: string
+}
+
+type SorteioAdmin = {
+  id: string
+  titulo: string
+  descricao: string
+  expiraEm: string | null
+  vipBonus: boolean
+  vipMultiplier: number
+  numVencedores: number
+  modoResultado: 'igual' | 'colocacao'
+  premio: 'vip' | null
+  premioDias: number
+  participantes: string[]
+  participantesInfo: { id: string; isVip: boolean }[]
+  criadoEm: string
+  sorteado: boolean
+  vencedores: { id: string; nome: string; colocacao: number }[]
+}
 
 function displayName(v: VipEntry): string {
   return v.nick ?? v.globalName ?? v.username ?? v.discordId
@@ -109,6 +136,50 @@ export default function ControlePage() {
   const [importJson, setImportJson]   = useState('')
   const [importOpen, setImportOpen]   = useState(false)
   const [importResult, setImportResult] = useState<string | null>(null)
+  const [vrcEditId, setVrcEditId]     = useState<string | null>(null)
+  const [vrcInput, setVrcInput]       = useState('')
+  const [vrcErr, setVrcErr]           = useState<string | null>(null)
+
+  // ── Sorteios ──────────────────────────────────────────────
+  const [sorteio, setSorteio]             = useState<SorteioAdmin | null>(null)
+  const [sorteioFetch, setSorteioFetch]   = useState(false)
+  const [sTitulo, setSTitulo]             = useState('')
+  const [sDescricao, setSDescricao]       = useState('')
+  const [sExpiraEm, setSExpiraEm]         = useState('')
+  const [sVipBonus, setSVipBonus]         = useState(false)
+  const [sVipMult, setSVipMult]           = useState(3)
+  const [sErr, setSErr]                   = useState('')
+  const [sCreateBusy, setSCreateBusy]     = useState(false)
+  const [sSortBusy, setSortBusy]          = useState(false)
+  const [sDelBusy, setSDelBusy]           = useState(false)
+  const [sEditOpen, setSEditOpen]         = useState(false)
+  const [sEditTitulo, setSEditTitulo]     = useState('')
+  const [sEditDesc, setSEditDesc]         = useState('')
+  const [sEditExpira, setSEditExpira]     = useState('')
+  const [sEditVipBonus, setSEditVipBonus] = useState(false)
+  const [sEditVipMult, setSEditVipMult]   = useState(3)
+  const [sEditBusy, setSEditBusy]         = useState(false)
+  const [sEditErr, setSEditErr]           = useState('')
+  const [sNumVencedores, setSNumVencedores]           = useState(1)
+  const [sModoResultado, setSModoResultado]           = useState<'igual' | 'colocacao'>('igual')
+  const [sEditNumVencedores, setSEditNumVencedores]   = useState(1)
+  const [sEditModoResultado, setSEditModoResultado]   = useState<'igual' | 'colocacao'>('igual')
+  const [sPremio, setSPremio]                         = useState<'vip' | null>(null)
+  const [sPremioDias, setSPremioDias]                 = useState(30)
+  const [sEditPremio, setSEditPremio]                 = useState<'vip' | null>(null)
+  const [sEditPremioDias, setSEditPremioDias]         = useState(30)
+
+  // ── Grupos ───────────────────────────────────────────────
+  const [grupos, setGrupos]                 = useState<GrupoAdmin[]>([])
+  const [gruposFetch, setGruposFetch]       = useState(false)
+  const [gNome, setGNome]                   = useState('')
+  const [gSlug, setGSlug]                   = useState('')
+  const [gSenha, setGSenha]                 = useState('')
+  const [gErr, setGErr]                     = useState('')
+  const [gBusy, setGBusy]                   = useState(false)
+  const [gVipsSlug, setGVipsSlug]           = useState<string | null>(null)
+  const [gVipsQtd, setGVipsQtd]             = useState(1)
+  const [gVipsBusy, setGVipsBusy]           = useState(false)
 
   // ── Propagandas ───────────────────────────────────────────
   const [propagandas, setPropagandas]       = useState<Propaganda[]>([])
@@ -129,6 +200,16 @@ export default function ControlePage() {
     setFetching(false)
   }, [])
 
+  const loadSorteio = useCallback(async () => {
+    setSorteioFetch(true)
+    const res = await fetch('/api/controle/sorteio')
+    if (res.ok) {
+      const d = await res.json()
+      setSorteio(d.sorteio)
+    }
+    setSorteioFetch(false)
+  }, [])
+
   const loadPropagandas = useCallback(async () => {
     setPropFetching(true)
     const res = await fetch('/api/controle/propagandas')
@@ -136,15 +217,22 @@ export default function ControlePage() {
     setPropFetching(false)
   }, [])
 
+  const loadGrupos = useCallback(async () => {
+    setGruposFetch(true)
+    const res = await fetch('/api/controle/grupos')
+    if (res.ok) setGrupos(await res.json())
+    setGruposFetch(false)
+  }, [])
+
   useEffect(() => {
     fetch('/api/controle/auth')
       .then(r => r.json())
       .then(d => {
-        if (d.authenticated) { setStatus('dashboard'); loadVips(); loadPropagandas() }
+        if (d.authenticated) { setStatus('dashboard'); loadVips(); loadPropagandas(); loadSorteio(); loadGrupos() }
         else setStatus('login')
       })
       .catch(() => setStatus('login'))
-  }, [loadVips, loadPropagandas])
+  }, [loadVips, loadPropagandas, loadSorteio])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -154,7 +242,7 @@ export default function ControlePage() {
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ password }),
     })
-    if (res.ok) { setStatus('dashboard'); loadVips(); loadPropagandas() }
+    if (res.ok) { setStatus('dashboard'); loadVips(); loadPropagandas(); loadSorteio(); loadGrupos() }
     else {
       const d = await res.json()
       setLoginErr(d.error ?? 'Erro')
@@ -167,7 +255,102 @@ export default function ControlePage() {
     setStatus('login')
     setVips([])
     setPropagandas([])
+    setSorteio(null)
     setPassword('')
+  }
+
+  async function handleCreateSorteio(e: React.FormEvent) {
+    e.preventDefault()
+    setSErr('')
+    if (!sTitulo.trim()) { setSErr('Informe o título'); return }
+    setSCreateBusy(true)
+    const res = await fetch('/api/controle/sorteio', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        titulo:         sTitulo,
+        descricao:      sDescricao,
+        expiraEm:       sExpiraEm || null,
+        vipBonus:       sVipBonus,
+        vipMultiplier:  sVipMult,
+        numVencedores:  sNumVencedores,
+        modoResultado:  sModoResultado,
+        premio:         sPremio,
+        premioDias:     sPremioDias,
+      }),
+    })
+    if (res.ok) {
+      setSTitulo(''); setSDescricao(''); setSExpiraEm(''); setSVipBonus(false); setSVipMult(3)
+      setSNumVencedores(1); setSModoResultado('igual'); setSPremio(null); setSPremioDias(30)
+      await loadSorteio()
+    } else {
+      const d = await res.json()
+      setSErr(d.error ?? 'Erro ao criar sorteio')
+    }
+    setSCreateBusy(false)
+  }
+
+  async function handleSortear() {
+    if (!confirm('Sortear o vencedor agora? Esta ação não pode ser desfeita.')) return
+    setSortBusy(true)
+    const res = await fetch('/api/controle/sorteio/sortear', { method: 'POST' })
+    const d = await res.json()
+    if (!res.ok) { alert(d.error ?? 'Erro ao sortear') }
+    await loadSorteio()
+    setSortBusy(false)
+  }
+
+  async function handleDeleteSorteio() {
+    if (!confirm('Encerrar e apagar o sorteio atual? Os dados serão perdidos.')) return
+    setSDelBusy(true)
+    await fetch('/api/controle/sorteio', { method: 'DELETE' })
+    setSorteio(null)
+    setSDelBusy(false)
+  }
+
+  function openEditSorteio() {
+    if (!sorteio) return
+    setSEditTitulo(sorteio.titulo)
+    setSEditDesc(sorteio.descricao)
+    setSEditExpira(sorteio.expiraEm ?? '')
+    setSEditVipBonus(sorteio.vipBonus)
+    setSEditVipMult(sorteio.vipMultiplier)
+    setSEditNumVencedores(sorteio.numVencedores ?? 1)
+    setSEditModoResultado(sorteio.modoResultado ?? 'igual')
+    setSEditPremio(sorteio.premio ?? null)
+    setSEditPremioDias(sorteio.premioDias ?? 30)
+    setSEditErr('')
+    setSEditOpen(true)
+  }
+
+  async function handleEditSorteio(e: React.FormEvent) {
+    e.preventDefault()
+    setSEditErr('')
+    if (!sEditTitulo.trim()) { setSEditErr('Título obrigatório'); return }
+    setSEditBusy(true)
+    const res = await fetch('/api/controle/sorteio', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        titulo:         sEditTitulo,
+        descricao:      sEditDesc,
+        expiraEm:       sEditExpira || null,
+        vipBonus:       sEditVipBonus,
+        vipMultiplier:  sEditVipMult,
+        numVencedores:  sEditNumVencedores,
+        modoResultado:  sEditModoResultado,
+        premio:         sEditPremio,
+        premioDias:     sEditPremioDias,
+      }),
+    })
+    if (res.ok) {
+      setSEditOpen(false)
+      await loadSorteio()
+    } else {
+      const d = await res.json()
+      setSEditErr(d.error ?? 'Erro ao salvar')
+    }
+    setSEditBusy(false)
   }
 
   async function addDays(discordId: string, days: number) {
@@ -191,6 +374,36 @@ export default function ControlePage() {
     })
     setEditingId(null)
     await loadVips()
+    setBusy(null)
+  }
+
+  async function handleUpdateVrcNick(discordId: string) {
+    const username = vrcInput.trim()
+    if (!username) return
+    setVrcErr(null)
+    setBusy(`vrc-${discordId}`)
+    const res = await fetch(`/api/controle/vips/${discordId}/update-nick`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ vrchatUsername: username }),
+    })
+    const data = await res.json()
+    if (res.ok) {
+      setVips(prev => prev.map(v =>
+        v.discordId === discordId ? { ...v, nick: data.displayName } : v
+      ))
+      setVrcEditId(null)
+      setVrcInput('')
+    } else {
+      setVrcErr(data.error ?? 'Erro ao atualizar')
+    }
+    setBusy(null)
+  }
+
+  async function notifyVip(discordId: string, name: string) {
+    setBusy(`notify-${discordId}`)
+    const res = await fetch(`/api/controle/vips/${discordId}/notify`, { method: 'POST' })
+    if (!res.ok) alert(`Erro ao enviar DM para ${name}`)
     setBusy(null)
   }
 
@@ -358,7 +571,7 @@ export default function ControlePage() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 bg-br-dark2 border border-white/10 rounded-xl p-1 w-fit">
-        {([['vips', 'VIPs'], ['propagandas', 'Propagandas']] as [Tab, string][]).map(([key, label]) => (
+        {([['vips', 'VIPs'], ['propagandas', 'Propagandas'], ['sorteios', 'Sorteios'], ['grupos', 'Grupos']] as [Tab, string][]).map(([key, label]) => (
           <button
             key={key}
             onClick={() => setActiveTab(key)}
@@ -497,9 +710,9 @@ export default function ControlePage() {
                   </thead>
                   <tbody>
                     {vips.map((v, i) => (
+                      <React.Fragment key={v.discordId}>
                       <tr
-                        key={v.discordId}
-                        className={`border-b border-white/5 last:border-0 ${i % 2 === 0 ? '' : 'bg-white/[0.02]'}`}
+                        className={`border-b border-white/5 ${vrcEditId === v.discordId ? 'border-purple-900/40' : 'last:border-0'} ${i % 2 === 0 ? '' : 'bg-white/[0.02]'}`}
                       >
                         <td className="px-4 py-3 font-medium">{displayName(v)}</td>
                         <td className="px-4 py-3 text-white/40 font-mono text-xs hidden md:table-cell">
@@ -560,6 +773,28 @@ export default function ControlePage() {
                             )}
                             <button
                               onClick={() => {
+                                setVrcEditId(v.discordId)
+                                setVrcInput('')
+                                setVrcErr(null)
+                              }}
+                              disabled={!!busy}
+                              title="Atualizar nick do VRChat no Discord"
+                              className="text-xs bg-purple-900/30 text-purple-400 hover:bg-purple-900/60
+                                         px-2 py-1 rounded transition-colors disabled:opacity-40"
+                            >
+                              VRC
+                            </button>
+                            <button
+                              onClick={() => notifyVip(v.discordId, displayName(v))}
+                              disabled={!!busy}
+                              title="Enviar DM sobre VIP"
+                              className="text-xs bg-blue-900/30 text-blue-400 hover:bg-blue-900/60
+                                         px-2 py-1 rounded transition-colors disabled:opacity-40"
+                            >
+                              {busy === `notify-${v.discordId}` ? '...' : 'DM'}
+                            </button>
+                            <button
+                              onClick={() => {
                                 setEditingId(v.discordId)
                                 setEditDate(v.expiresAt)
                               }}
@@ -582,12 +817,530 @@ export default function ControlePage() {
                           </div>
                         </td>
                       </tr>
+                      {vrcEditId === v.discordId && (
+                        <tr className="bg-purple-950/20 border-b border-white/5">
+                          <td colSpan={5} className="px-4 py-3">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs text-purple-300 font-semibold">Username VRChat:</span>
+                              <input
+                                type="text"
+                                autoFocus
+                                placeholder="ex: NomeExatoNoVRChat"
+                                value={vrcInput}
+                                onChange={e => { setVrcInput(e.target.value); setVrcErr(null) }}
+                                onKeyDown={e => { if (e.key === 'Enter') handleUpdateVrcNick(v.discordId) }}
+                                className="bg-br-dark border border-purple-700/50 rounded px-2 py-1 text-xs text-white
+                                           placeholder-white/20 focus:outline-none focus:border-purple-500 w-48"
+                              />
+                              <button
+                                onClick={() => handleUpdateVrcNick(v.discordId)}
+                                disabled={busy === `vrc-${v.discordId}` || !vrcInput.trim()}
+                                className="text-xs bg-purple-700 text-white font-bold px-3 py-1 rounded
+                                           hover:bg-purple-600 transition-colors disabled:opacity-50"
+                              >
+                                {busy === `vrc-${v.discordId}` ? 'Buscando...' : 'Atualizar nick'}
+                              </button>
+                              <button
+                                onClick={() => { setVrcEditId(null); setVrcInput(''); setVrcErr(null) }}
+                                className="text-xs text-white/30 hover:text-white/60"
+                              >
+                                ✕
+                              </button>
+                              {vrcErr && <span className="text-xs text-red-400">{vrcErr}</span>}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      </React.Fragment>
                     ))}
                   </tbody>
                 </table>
               </div>
             )}
           </div>
+        </>
+      )}
+
+      {/* ─── Aba Sorteios ─────────────────────────────────── */}
+      {activeTab === 'sorteios' && (
+        <>
+          {sorteioFetch ? (
+            <div className="flex justify-center py-12">
+              <div className="w-6 h-6 border-2 border-br-yellow border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : sorteio ? (
+            /* ── Sorteio ativo ── */
+            <div className="flex flex-col gap-6">
+              {/* Card de status */}
+              <div className="bg-br-dark2 border border-white/10 rounded-xl p-5">
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div>
+                    <div className={`inline-flex items-center gap-2 text-xs font-bold px-3 py-1 rounded-full mb-2 uppercase tracking-widest
+                      ${sorteio.sorteado
+                        ? 'bg-white/10 text-white/40'
+                        : 'bg-green-500/20 border border-green-500/40 text-green-400'}`}>
+                      {sorteio.sorteado
+                        ? 'Encerrado'
+                        : <><span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block" /> Ativo</>}
+                    </div>
+                    <h3 className="text-xl font-bold text-white">{sorteio.titulo}</h3>
+                    {sorteio.descricao && <p className="text-white/50 text-sm mt-1">{sorteio.descricao}</p>}
+                  </div>
+                  <div className="flex gap-2 flex-shrink-0">
+                    {!sorteio.sorteado && (
+                      <button
+                        onClick={openEditSorteio}
+                        className="text-xs bg-white/10 text-white/60 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                      >
+                        Editar
+                      </button>
+                    )}
+                    <button
+                      onClick={handleDeleteSorteio}
+                      disabled={sDelBusy}
+                      className="text-xs bg-red-900/30 text-red-400 hover:bg-red-900/60 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap"
+                    >
+                      {sDelBusy ? '...' : 'Encerrar'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-3 text-sm">
+                  <span className="bg-white/5 border border-white/10 rounded-full px-3 py-1 text-white/50">
+                    👥 {sorteio.participantes.length} participantes
+                  </span>
+                  {sorteio.vipBonus && (
+                    <span className="bg-br-yellow/10 border border-br-yellow/30 rounded-full px-3 py-1 text-br-yellow text-xs font-semibold">
+                      👑 VIP Bônus ativo ({sorteio.vipMultiplier}x)
+                    </span>
+                  )}
+                  {sorteio.premio === 'vip' && (
+                    <span className="bg-purple-500/10 border border-purple-500/30 rounded-full px-3 py-1 text-purple-300 text-xs font-semibold">
+                      🎁 Prêmio: {sorteio.premioDias ?? 30}d de VIP (auto)
+                    </span>
+                  )}
+                  {sorteio.expiraEm && (
+                    <span className="bg-white/5 border border-white/10 rounded-full px-3 py-1 text-white/50">
+                      📅 Encerra: {(() => {
+                        const d = new Date(sorteio.expiraEm)
+                        const pad = (n: number) => String(n).padStart(2, '0')
+                        const temHora = sorteio.expiraEm.includes('T') && !(pad(d.getHours()) === '00' && pad(d.getMinutes()) === '00')
+                        return temHora
+                          ? `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} às ${pad(d.getHours())}h${pad(d.getMinutes())}`
+                          : `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`
+                      })()}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Editar sorteio */}
+              {sEditOpen && !sorteio.sorteado && (
+                <form onSubmit={handleEditSorteio} className="bg-br-dark border border-br-yellow/20 rounded-xl p-5 flex flex-col gap-4">
+                  <p className="text-sm font-semibold text-br-yellow uppercase tracking-wider">Editar sorteio</p>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-white/40">Título *</label>
+                    <input
+                      type="text"
+                      value={sEditTitulo}
+                      onChange={e => setSEditTitulo(e.target.value)}
+                      className="bg-br-dark2 border border-white/15 rounded-lg px-3 py-2 text-sm text-white
+                                 focus:outline-none focus:border-br-yellow/50"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-white/40">Descrição</label>
+                    <textarea
+                      value={sEditDesc}
+                      onChange={e => setSEditDesc(e.target.value)}
+                      rows={5}
+                      className="bg-br-dark2 border border-white/15 rounded-lg px-3 py-2 text-sm text-white
+                                 focus:outline-none focus:border-br-yellow/50 resize-y min-h-[120px]"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs text-white/40">Data e hora de encerramento</label>
+                      <input
+                        type="datetime-local"
+                        value={sEditExpira}
+                        onChange={e => setSEditExpira(e.target.value)}
+                        className="bg-br-dark2 border border-white/15 rounded-lg px-3 py-2 text-sm text-white
+                                   focus:outline-none focus:border-br-yellow/50"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs text-white/40">Multiplicador VIP</label>
+                      <div className="flex gap-1">
+                        {[2, 3, 5].map(n => (
+                          <button
+                            key={n}
+                            type="button"
+                            onClick={() => setSEditVipMult(n)}
+                            className={`flex-1 text-sm py-2 rounded-lg font-medium transition-colors
+                              ${sEditVipMult === n
+                                ? 'bg-br-yellow text-black'
+                                : 'bg-br-dark2 border border-white/15 text-white/60 hover:border-white/30'
+                              }`}
+                          >
+                            {n}×
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs text-white/40">Número de ganhadores</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={20}
+                        value={sEditNumVencedores}
+                        onChange={e => setSEditNumVencedores(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="bg-br-dark2 border border-white/15 rounded-lg px-3 py-2 text-sm text-white
+                                   focus:outline-none focus:border-br-yellow/50"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs text-white/40">Modo de resultado</label>
+                      <div className="flex gap-1">
+                        {(['igual', 'colocacao'] as const).map(modo => (
+                          <button
+                            key={modo}
+                            type="button"
+                            onClick={() => setSEditModoResultado(modo)}
+                            className={`flex-1 text-sm py-2 rounded-lg font-medium transition-colors
+                              ${sEditModoResultado === modo
+                                ? 'bg-br-yellow text-black'
+                                : 'bg-br-dark2 border border-white/15 text-white/60 hover:border-white/30'
+                              }`}
+                          >
+                            {modo === 'igual' ? '🤝 Iguais' : '🥇 Com colocação'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1 md:col-span-2">
+                      <label className="text-xs text-white/40">Prêmio automático ao encerrar</label>
+                      <div className="flex gap-1">
+                        {([null, 'vip'] as const).map(p => (
+                          <button
+                            key={String(p)}
+                            type="button"
+                            onClick={() => setSEditPremio(p)}
+                            className={`flex-1 text-sm py-2 rounded-lg font-medium transition-colors
+                              ${sEditPremio === p
+                                ? 'bg-br-yellow text-black'
+                                : 'bg-br-dark2 border border-white/15 text-white/60 hover:border-white/30'
+                              }`}
+                          >
+                            {p === null ? '🎁 Nenhum' : '👑 VIP'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {sEditPremio === 'vip' && (
+                      <div className="flex flex-col gap-1">
+                        <label className="text-xs text-white/40">Dias de VIP para os vencedores</label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={365}
+                          value={sEditPremioDias}
+                          onChange={e => setSEditPremioDias(Math.max(1, parseInt(e.target.value) || 30))}
+                          className="bg-br-dark2 border border-white/15 rounded-lg px-3 py-2 text-sm text-white
+                                     focus:outline-none focus:border-br-yellow/50"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <label className="flex items-center gap-3 cursor-pointer select-none">
+                    <div
+                      onClick={() => setSEditVipBonus(v => !v)}
+                      className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0
+                        ${sEditVipBonus ? 'bg-br-yellow' : 'bg-white/20'}`}
+                    >
+                      <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all
+                        ${sEditVipBonus ? 'left-6' : 'left-1'}`} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-white">Bônus para VIPs</p>
+                      <p className="text-xs text-white/40">VIPs terão {sEditVipMult}x mais chances</p>
+                    </div>
+                  </label>
+
+                  {sEditErr && <p className="text-red-400 text-sm">{sEditErr}</p>}
+
+                  <div className="flex gap-2">
+                    <button
+                      type="submit"
+                      disabled={sEditBusy}
+                      className="bg-br-yellow text-black text-sm font-bold px-5 py-2 rounded-lg
+                                 hover:brightness-110 transition-all disabled:opacity-50"
+                    >
+                      {sEditBusy ? 'Salvando...' : 'Salvar alterações'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSEditOpen(false)}
+                      className="text-sm text-white/40 hover:text-white/70 px-4 py-2 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Vencedores */}
+              {sorteio.sorteado && sorteio.vencedores?.length > 0 && (
+                <div className="bg-br-yellow/10 border border-br-yellow/30 rounded-xl p-5">
+                  <p className="text-white/50 text-sm mb-3 text-center">
+                    {sorteio.vencedores.length === 1 ? '🏆 Vencedor sorteado' : `🏆 ${sorteio.vencedores.length} ganhadores sorteados`}
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    {sorteio.vencedores.map(v => (
+                      <div key={v.id} className="flex items-center justify-between bg-br-yellow/10 rounded-lg px-4 py-2">
+                        <div className="flex items-center gap-2">
+                          {sorteio.modoResultado === 'colocacao' && (
+                            <span className="text-lg">{['🥇','🥈','🥉'][v.colocacao - 1] ?? `${v.colocacao}º`}</span>
+                          )}
+                          <span className="text-br-yellow font-bold">{v.nome}</span>
+                        </div>
+                        <span className="text-white/30 text-xs font-mono">{v.id}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Botão sortear */}
+              {!sorteio.sorteado && (
+                <button
+                  onClick={handleSortear}
+                  disabled={sSortBusy || sorteio.participantes.length === 0}
+                  className="bg-br-yellow text-black font-bold px-6 py-3 rounded-xl hover:brightness-110 transition-all disabled:opacity-50 w-full"
+                >
+                  {sSortBusy ? 'Sorteando...' : `🎲 Sortear ${(sorteio.numVencedores ?? 1) > 1 ? `${sorteio.numVencedores} Vencedores` : 'Vencedor'} (${sorteio.participantes.length} participantes)`}
+                </button>
+              )}
+
+              {/* Lista de participantes */}
+              {sorteio.participantesInfo.length > 0 && (
+                <div className="bg-br-dark2 border border-white/10 rounded-xl overflow-hidden">
+                  <p className="text-xs text-white/40 uppercase tracking-widest px-4 py-3 border-b border-white/5">
+                    Participantes
+                  </p>
+                  <div className="divide-y divide-white/5 max-h-64 overflow-y-auto">
+                    {sorteio.participantesInfo.map((p, i) => (
+                      <div key={p.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
+                        <div className="flex items-center gap-3">
+                          <span className="text-white/20 text-xs w-5">{i + 1}</span>
+                          <span className="font-mono text-white/60 text-xs">{p.id}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {p.isVip && (
+                            <span className="text-xs bg-br-yellow/20 text-br-yellow px-2 py-0.5 rounded font-bold">
+                              VIP {sorteio.vipBonus ? `×${sorteio.vipMultiplier}` : ''}
+                            </span>
+                          )}
+                          {sorteio.vencedores?.find(v => v.id === p.id) && (() => {
+                            const v = sorteio.vencedores.find(v => v.id === p.id)!
+                            const label = sorteio.modoResultado === 'colocacao'
+                              ? `${['🥇','🥈','🥉'][v.colocacao - 1] ?? `${v.colocacao}º`} ${v.colocacao}º lugar`
+                              : '🏆 Ganhador'
+                            return (
+                              <span className="text-xs bg-green-900/60 text-green-300 px-2 py-0.5 rounded font-bold">
+                                {label}
+                              </span>
+                            )
+                          })()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* ── Criar sorteio ── */
+            <form onSubmit={handleCreateSorteio} className="bg-br-dark2 border border-white/10 rounded-xl p-5 flex flex-col gap-4">
+              <p className="text-sm font-semibold text-white/60 uppercase tracking-wider">
+                Criar novo sorteio
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Título */}
+                <div className="flex flex-col gap-1 md:col-span-2">
+                  <label className="text-xs text-white/40">Título do sorteio *</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Sorteio de VIP 30 dias!"
+                    value={sTitulo}
+                    onChange={e => setSTitulo(e.target.value)}
+                    className="bg-br-dark border border-white/15 rounded-lg px-3 py-2 text-sm text-white
+                               placeholder-white/20 focus:outline-none focus:border-br-yellow/50"
+                  />
+                </div>
+
+                {/* Descrição */}
+                <div className="flex flex-col gap-1 md:col-span-2">
+                  <label className="text-xs text-white/40">Descrição (opcional)</label>
+                  <textarea
+                    placeholder="Descreva o prêmio ou regras do sorteio..."
+                    value={sDescricao}
+                    onChange={e => setSDescricao(e.target.value)}
+                    rows={6}
+                    className="bg-br-dark border border-white/15 rounded-lg px-3 py-2 text-sm text-white
+                               placeholder-white/20 focus:outline-none focus:border-br-yellow/50 resize-y min-h-[140px]"
+                  />
+                </div>
+
+                {/* Data de encerramento */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-white/40">Data e hora de encerramento (opcional)</label>
+                  <input
+                    type="datetime-local"
+                    value={sExpiraEm}
+                    onChange={e => setSExpiraEm(e.target.value)}
+                    className="bg-br-dark border border-white/15 rounded-lg px-3 py-2 text-sm text-white
+                               focus:outline-none focus:border-br-yellow/50"
+                  />
+                </div>
+
+                {/* VIP multiplicador */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-white/40">Multiplicador de entradas VIP</label>
+                  <div className="flex gap-1">
+                    {[2, 3, 5].map(n => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setSVipMult(n)}
+                        className={`flex-1 text-sm py-2 rounded-lg font-medium transition-colors
+                          ${sVipMult === n
+                            ? 'bg-br-yellow text-black'
+                            : 'bg-br-dark border border-white/15 text-white/60 hover:border-white/30'
+                          }`}
+                      >
+                        {n}×
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Número de ganhadores */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-white/40">Número de ganhadores</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={sNumVencedores}
+                    onChange={e => setSNumVencedores(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="bg-br-dark border border-white/15 rounded-lg px-3 py-2 text-sm text-white
+                               focus:outline-none focus:border-br-yellow/50"
+                  />
+                </div>
+
+                {/* Modo de resultado */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-white/40">Modo de resultado</label>
+                  <div className="flex gap-1">
+                    {(['igual', 'colocacao'] as const).map(modo => (
+                      <button
+                        key={modo}
+                        type="button"
+                        onClick={() => setSModoResultado(modo)}
+                        className={`flex-1 text-sm py-2 rounded-lg font-medium transition-colors
+                          ${sModoResultado === modo
+                            ? 'bg-br-yellow text-black'
+                            : 'bg-br-dark border border-white/15 text-white/60 hover:border-white/30'
+                          }`}
+                      >
+                        {modo === 'igual' ? '🤝 Iguais' : '🥇 Com colocação'}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-white/30">
+                    {sModoResultado === 'igual' ? 'Todos ganham o mesmo prêmio' : 'Ganhadores por colocação: 1º, 2º, 3º...'}
+                  </p>
+                </div>
+
+                {/* Prêmio automático */}
+                <div className="flex flex-col gap-1 md:col-span-2">
+                  <label className="text-xs text-white/40">Prêmio automático ao encerrar</label>
+                  <div className="flex gap-1">
+                    {([null, 'vip'] as const).map(p => (
+                      <button
+                        key={String(p)}
+                        type="button"
+                        onClick={() => setSPremio(p)}
+                        className={`flex-1 text-sm py-2 rounded-lg font-medium transition-colors
+                          ${sPremio === p
+                            ? 'bg-br-yellow text-black'
+                            : 'bg-br-dark border border-white/15 text-white/60 hover:border-white/30'
+                          }`}
+                      >
+                        {p === null ? '🎁 Nenhum' : '👑 VIP'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {sPremio === 'vip' && (
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-white/40">Dias de VIP para os vencedores</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={365}
+                      value={sPremioDias}
+                      onChange={e => setSPremioDias(Math.max(1, parseInt(e.target.value) || 30))}
+                      className="bg-br-dark border border-white/15 rounded-lg px-3 py-2 text-sm text-white
+                                 focus:outline-none focus:border-br-yellow/50"
+                    />
+                    <p className="text-xs text-white/30">VIP será concedido automaticamente ao sortear</p>
+                  </div>
+                )}
+              </div>
+
+              {/* VIP Bônus toggle */}
+              <label className="flex items-center gap-3 cursor-pointer select-none">
+                <div
+                  onClick={() => setSVipBonus(v => !v)}
+                  className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0
+                    ${sVipBonus ? 'bg-br-yellow' : 'bg-white/20'}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all
+                    ${sVipBonus ? 'left-6' : 'left-1'}`} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">Bônus para VIPs</p>
+                  <p className="text-xs text-white/40">
+                    VIPs terão {sVipMult}x mais chances de ganhar
+                  </p>
+                </div>
+              </label>
+
+              {sErr && <p className="text-red-400 text-sm">{sErr}</p>}
+
+              <button
+                type="submit"
+                disabled={sCreateBusy}
+                className="self-start bg-br-yellow text-black text-sm font-bold px-5 py-2.5 rounded-lg
+                           hover:brightness-110 transition-all disabled:opacity-50"
+              >
+                {sCreateBusy ? 'Criando...' : '+ Criar sorteio'}
+              </button>
+            </form>
+          )}
         </>
       )}
 
@@ -800,6 +1553,168 @@ export default function ControlePage() {
                     </div>
                   )
                 })}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* ─── Aba Grupos ──────────────────────────────────────── */}
+      {activeTab === 'grupos' && (
+        <>
+          {/* Adicionar grupo */}
+          <div className="bg-br-dark2 border border-white/10 rounded-xl p-5 mb-6">
+            <h3 className="text-sm font-semibold text-white/60 uppercase tracking-wider mb-4">Adicionar Grupo Verificado</h3>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault()
+                setGErr('')
+                setGBusy(true)
+                const res = await fetch('/api/controle/grupos', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ nome: gNome, slug: gSlug, senha: gSenha }),
+                })
+                const d = await res.json()
+                if (res.ok) {
+                  setGNome(''); setGSlug(''); setGSenha('')
+                  await loadGrupos()
+                } else {
+                  setGErr(d.error ?? 'Erro ao adicionar grupo')
+                }
+                setGBusy(false)
+              }}
+              className="flex flex-wrap gap-3 items-end"
+            >
+              <div className="flex flex-col gap-1">
+                <label className="text-white/40 text-xs uppercase tracking-wider">Nome</label>
+                <input
+                  value={gNome} onChange={e => setGNome(e.target.value)} required
+                  placeholder="Ex: DRAKHALEM"
+                  className="bg-br-dark border border-white/15 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-br-yellow/50 w-44"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-white/40 text-xs uppercase tracking-wider">Slug (URL)</label>
+                <input
+                  value={gSlug} onChange={e => setGSlug(e.target.value.toLowerCase().replace(/\s+/g, '-'))} required
+                  placeholder="drakhalem"
+                  className="bg-br-dark border border-white/15 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-br-yellow/50 w-36"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-white/40 text-xs uppercase tracking-wider">Senha</label>
+                <input
+                  value={gSenha} onChange={e => setGSenha(e.target.value)} required
+                  placeholder="Senha do grupo"
+                  className="bg-br-dark border border-white/15 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-br-yellow/50 w-44"
+                />
+              </div>
+              <button
+                type="submit" disabled={gBusy}
+                className="bg-br-yellow text-black text-sm font-bold px-4 py-2 rounded-lg hover:brightness-110 transition-all disabled:opacity-50"
+              >
+                {gBusy ? '...' : '+ Adicionar'}
+              </button>
+              {gErr && <p className="text-red-400 text-sm w-full">{gErr}</p>}
+            </form>
+          </div>
+
+          {/* Lista de grupos */}
+          <div className="bg-br-dark2 border border-white/10 rounded-xl overflow-hidden">
+            {gruposFetch ? (
+              <div className="flex justify-center py-12">
+                <div className="w-6 h-6 border-2 border-br-yellow border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : grupos.length === 0 ? (
+              <p className="text-center text-white/30 py-12">Nenhum grupo cadastrado</p>
+            ) : (
+              <div className="divide-y divide-white/5">
+                {grupos.map(g => (
+                  <div key={g.slug} className="px-5 py-4 flex flex-wrap items-center gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-sm text-white">{g.nome}</span>
+                        <span className="text-xs text-white/30 font-mono">/sorteio/{g.slug}</span>
+                        {!g.ativo && (
+                          <span className="text-xs bg-red-900/40 text-red-400 px-2 py-0.5 rounded">inativo</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 mt-1 text-xs text-white/35">
+                        <span>Canal: {g.canalId ?? 'não configurado'}</span>
+                      </div>
+                    </div>
+
+                    {/* VIPs disponíveis */}
+                    <div className="flex items-center gap-2">
+                      <span className={`text-lg font-bold ${g.vipsDisponiveis > 0 ? 'text-br-yellow' : 'text-white/30'}`}>
+                        {g.vipsDisponiveis} VIP{g.vipsDisponiveis !== 1 ? 's' : ''}
+                      </span>
+                      {gVipsSlug === g.slug ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number" min="1" value={gVipsQtd}
+                            onChange={e => setGVipsQtd(parseInt(e.target.value) || 1)}
+                            className="w-16 bg-br-dark border border-white/15 rounded px-2 py-1 text-xs text-white text-center focus:outline-none"
+                          />
+                          <button
+                            disabled={gVipsBusy}
+                            onClick={async () => {
+                              setGVipsBusy(true)
+                              const res = await fetch(`/api/controle/grupos/${g.slug}/vips`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ quantidade: gVipsQtd }),
+                              })
+                              if (res.ok) { setGVipsSlug(null); await loadGrupos() }
+                              setGVipsBusy(false)
+                            }}
+                            className="text-xs bg-br-yellow text-black font-bold px-2 py-1 rounded hover:brightness-110 disabled:opacity-50"
+                          >
+                            {gVipsBusy ? '...' : '✓'}
+                          </button>
+                          <button onClick={() => setGVipsSlug(null)} className="text-xs text-white/40 hover:text-white/60">✕</button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => { setGVipsSlug(g.slug); setGVipsQtd(1) }}
+                          className="text-xs bg-white/10 text-white/60 px-2 py-1 rounded hover:bg-white/20 transition-colors"
+                        >
+                          + VIPs
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Toggle ativo / remover */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={async () => {
+                          await fetch(`/api/controle/grupos/${g.slug}`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ ativo: !g.ativo }),
+                          })
+                          await loadGrupos()
+                        }}
+                        className={`text-xs px-3 py-1 rounded border transition-colors ${g.ativo
+                          ? 'border-green-500/30 text-green-400 hover:bg-green-500/10'
+                          : 'border-white/15 text-white/40 hover:bg-white/10'}`}
+                      >
+                        {g.ativo ? 'Ativo' : 'Inativo'}
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!confirm(`Remover grupo ${g.nome}?`)) return
+                          await fetch(`/api/controle/grupos/${g.slug}`, { method: 'DELETE' })
+                          await loadGrupos()
+                        }}
+                        className="text-xs bg-red-900/30 text-red-400 hover:bg-red-900/60 px-2 py-1 rounded transition-colors"
+                      >
+                        Remover
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>

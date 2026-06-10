@@ -32,7 +32,9 @@ export async function GET(req: NextRequest) {
   const user = await userRes.json()
 
   const cookieStore = await cookies()
-  const origin = cookieStore.get('auth_origin')?.value ?? 'vip'
+  // Prefer state param (survives cross-site redirects); fall back to cookie for old flows
+  const stateParam = req.nextUrl.searchParams.get('state')
+  const origin = stateParam ? decodeURIComponent(stateParam) : (cookieStore.get('auth_origin')?.value ?? 'vip')
 
   cookieStore.set('discord_user', JSON.stringify({
     id: user.id,

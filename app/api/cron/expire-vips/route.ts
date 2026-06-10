@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { kvKeys, kvGet, kvDel, kvSet } from '@/lib/kv'
+import { signOptOutToken } from '@/lib/vipToken'
 
 const BOT_TOKEN = () => process.env.DISCORD_BOT_TOKEN!
 const GUILD_ID  = () => process.env.DISCORD_GUILD_ID!
@@ -13,7 +14,6 @@ async function removeRole(discordId: string, roleId: string) {
 }
 
 async function sendDM(discordId: string, message: string) {
-  // Abre canal DM
   const dmRes = await fetch('https://discord.com/api/v10/users/@me/channels', {
     method:  'POST',
     headers: { Authorization: `Bot ${BOT_TOKEN()}`, 'Content-Type': 'application/json' },
@@ -35,8 +35,14 @@ function formatDate(iso: string): string {
   return `${d}/${m}/${y}`
 }
 
+type VipEntry = {
+  expiresAt:    string
+  roleId:       string
+  ultimoAviso?: string   // YYYY-MM-DD do último lembrete enviado
+  optOut?:      boolean  // usuário pediu para não receber mais lembretes
+}
+
 export async function GET(req: NextRequest) {
-  // Vercel injeta Authorization: Bearer {CRON_SECRET} nas chamadas de cron
   const auth = req.headers.get('authorization')
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -44,8 +50,7 @@ export async function GET(req: NextRequest) {
 
   const today    = new Date()
   today.setHours(0, 0, 0, 0)
-  const tomorrow = new Date(today)
-  tomorrow.setDate(tomorrow.getDate() + 1)
+  const todayStr = today.toISOString().split('T')[0]
 
   const keys    = await kvKeys('vip:*')
   const removed: string[] = []
@@ -56,7 +61,7 @@ export async function GET(req: NextRequest) {
     const raw = await kvGet(key)
     if (!raw) { await kvDel(key); continue }
 
-    let entry: { expiresAt: string; roleId: string; avisado?: boolean }
+    let entry: VipEntry
     try { entry = JSON.parse(raw) } catch { await kvDel(key); continue }
 
     const expiresAt = new Date(entry.expiresAt)
@@ -65,24 +70,43 @@ export async function GET(req: NextRequest) {
     const discordId = key.replace('vip:', '')
 
     if (expiresAt <= today) {
+      // VIP expirado — remove cargo e avisa
       await removeRole(discordId, entry.roleId)
+      const expiredMsg =
+        `❌ **Seu VIP no Brasil Role BR expirou!**\n\n` +
+        `Seu VIP venceu em **${formatDate(entry.expiresAt)}**. Caso queira renovar e continuar aproveitando todos os benefícios, é só falar com a gente aqui no Discord ou acessar o site!\n\n` +
+        `🔗 ${SITE_URL}\n\n` +
+        `Agradecemos muito pelo seu apoio! 🇧🇷`
+      await sendDM(discordId, expiredMsg)
       await kvDel(key)
       removed.push(discordId)
       console.log(`[expire-vips] Removido: ${discordId} (venceu ${entry.expiresAt})`)
     } else {
-      // Avisa 1 dia antes se ainda não avisou
-      if (expiresAt.getTime() === tomorrow.getTime() && !entry.avisado) {
-        const msg =
-          `💛 **Olá! Obrigado por ser um apoiador do Brasil Role BR!**\n\n` +
-          `Seu VIP vai expirar **amanhã** (${formatDate(entry.expiresAt)}). Caso queira continuar aproveitando todos os benefícios, basta renovar pelo site!\n\n` +
-          `🔗 ${SITE_URL}\n\n` +
-          `Agradecemos muito pelo seu apoio! Ele faz toda a diferença pra comunidade 🇧🇷`
+      // VIP ainda ativo — verifica se deve enviar lembrete
+      const diasRestantes = Math.ceil((expiresAt.getTime() - today.getTime()) / 86_400_000)
 
-        await sendDM(discordId, msg)
-        entry.avisado = true
-        await kvSet(key, JSON.stringify(entry))
-        warned.push(discordId)
-        console.log(`[expire-vips] Avisado: ${discordId} (vence ${entry.expiresAt})`)
+      if (diasRestantes <= 1 && !entry.optOut) {
+        const diasDesdeUltimoAviso = entry.ultimoAviso
+          ? Math.floor((today.getTime() - new Date(entry.ultimoAviso).getTime()) / 86_400_000)
+          : Infinity
+
+        if (diasDesdeUltimoAviso >= 5) {
+          const optOutUrl =
+            `${SITE_URL}/api/vip/optout?id=${discordId}&token=${signOptOutToken(discordId)}`
+
+          const msg =
+            `💛 **Olá! Obrigado por ser um apoiador do Brasil Role BR!**\n\n` +
+            `Seu VIP vai expirar **amanhã** (${formatDate(entry.expiresAt)}). Caso queira continuar aproveitando todos os benefícios, basta renovar pelo site!\n\n` +
+            `🔗 ${SITE_URL}\n\n` +
+            `Agradecemos muito pelo seu apoio! Ele faz toda a diferença pra comunidade 🇧🇷\n\n` +
+            `-# Não quer mais receber esses lembretes? ${optOutUrl}`
+
+          await sendDM(discordId, msg)
+          entry.ultimoAviso = todayStr
+          await kvSet(key, JSON.stringify(entry))
+          warned.push(discordId)
+          console.log(`[expire-vips] Avisado: ${discordId} (vence ${entry.expiresAt})`)
+        }
       }
 
       kept.push(key)

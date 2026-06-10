@@ -1,7 +1,7 @@
 export type Lang = 'pt' | 'en' | 'es'
 
 export type Translations = {
-  nav: { home: string; about: string; team: string; vip: string; contact: string; updates: string }
+  nav: { home: string; about: string; team: string; vip: string; contact: string; updates: string; verify: string; raffle: string }
   updates: { titleA: string; titleB: string; subtitle: string; latest: string; filterAll: string; empty: string }
   hero: { badge: string; desc: string; btnVip: string; scroll: string }
   gallery: { titleA: string; titleB: string; subtitle: string; btnVisit: string }
@@ -58,9 +58,11 @@ export const translations: Record<Lang, Translations> = {
       home: 'Início',
       about: 'Sobre',
       team: 'Equipe',
-      vip: 'VIP',
-      contact: 'Contato',
       updates: 'Atualizações',
+      verify: 'Verificar',
+      vip: 'VIP',
+      raffle: 'Sorteio',
+      contact: 'Contato',
     },
     updates: {
       titleA: 'ÚLTIMAS',
@@ -147,6 +149,7 @@ export const translations: Record<Lang, Translations> = {
         'Seu nome na placa de apoiadores do mapa',
         'Cargos especiais exclusivos no Discord',
         'Canal VIP exclusivo no Discord',
+        'Bônus nos sorteios da comunidade (3x mais chances!)',
         'Muito mais por vir...',
       ],
       durationNote_before: 'O cargo VIP é válido por ',
@@ -213,9 +216,11 @@ export const translations: Record<Lang, Translations> = {
       home: 'Home',
       about: 'About',
       team: 'Team',
-      vip: 'VIP',
-      contact: 'Contact',
       updates: 'Updates',
+      verify: 'Verify',
+      vip: 'VIP',
+      raffle: 'Raffle',
+      contact: 'Contact',
     },
     updates: {
       titleA: 'LATEST',
@@ -302,6 +307,7 @@ export const translations: Record<Lang, Translations> = {
         "Your name on the map's supporters board",
         'Exclusive special roles on Discord',
         'Exclusive VIP channel on Discord',
+        'Bonus entries in community raffles (3x more chances!)',
         'Much more to come...',
       ],
       durationNote_before: 'The VIP role is valid for ',
@@ -368,9 +374,11 @@ export const translations: Record<Lang, Translations> = {
       home: 'Inicio',
       about: 'Sobre',
       team: 'Equipo',
-      vip: 'VIP',
-      contact: 'Contacto',
       updates: 'Actualizaciones',
+      verify: 'Verificar',
+      vip: 'VIP',
+      raffle: 'Sorteo',
+      contact: 'Contacto',
     },
     updates: {
       titleA: 'ÚLTIMAS',
@@ -457,6 +465,7 @@ export const translations: Record<Lang, Translations> = {
         'Tu nombre en la placa de seguidores del mapa',
         'Roles especiales exclusivos en Discord',
         'Canal VIP exclusivo en Discord',
+        'Entradas extra en los sorteos de la comunidad (3x más posibilidades!)',
         'Mucho más por venir...',
       ],
       durationNote_before: 'El rol VIP es válido por ',
