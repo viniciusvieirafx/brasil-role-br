@@ -69,7 +69,7 @@ export async function getUpdates(): Promise<Update[]> {
 
     const res = await fetch(
       `https://api.github.com/repos/${repo}/releases?per_page=20`,
-      { headers, next: { revalidate: 3600 } }
+      { headers, next: { revalidate: 300 } }
     )
     if (!res.ok) throw new Error(`GitHub API ${res.status}`)
 
