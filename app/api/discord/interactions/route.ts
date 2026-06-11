@@ -75,7 +75,7 @@ async function createTicket(userId: string, username: string) {
 
   // Envia mensagem de boas-vindas com botão de encerrar
   await api('POST', `/channels/${newChannel.id}/messages`, {
-    content: `Olá <@${userId}>! Um moderador irá te atender em breve.\n\nDigite sua dúvida aqui. Quando terminar, clique em **Encerrar Ticket**.`,
+    content: `Olá <@${userId}>! Um moderador irá te atender em breve.\n\n📝 Escreva sua dúvida aqui e aguarde a resposta.\n\n> 🔒 O botão **Encerrar Ticket** serve para **fechar o atendimento** — só clique nele quando tudo estiver resolvido.`,
     components: [{
       type: 1,
       components: [{
