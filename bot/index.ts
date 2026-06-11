@@ -69,7 +69,7 @@ async function handleTicketCreate(interaction: ButtonInteraction) {
     });
   }
 
-  const permissionOverwrites: Parameters<Guild['channels']['create']>[0]['permissionOverwrites'] = [
+  const permissionOverwrites = [
     { id: guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
     {
       id: user.id,
@@ -88,10 +88,7 @@ async function handleTicketCreate(interaction: ButtonInteraction) {
         PermissionsBitField.Flags.ManageChannels,
       ],
     },
-  ];
-
-  if (MOD_ROLE_ID) {
-    permissionOverwrites.push({
+    ...(MOD_ROLE_ID ? [{
       id: MOD_ROLE_ID,
       allow: [
         PermissionsBitField.Flags.ViewChannel,
@@ -99,8 +96,8 @@ async function handleTicketCreate(interaction: ButtonInteraction) {
         PermissionsBitField.Flags.ReadMessageHistory,
         PermissionsBitField.Flags.ManageChannels,
       ],
-    });
-  }
+    }] : []),
+  ];
 
   const ticketChannel = await guild.channels.create({
     name: channelName,
