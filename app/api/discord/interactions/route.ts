@@ -124,13 +124,23 @@ export async function POST(req: NextRequest) {
     const channelId: string = body.channel_id
 
     if (customId === 'ticket_create') {
-      const result = await createTicket(userId, username)
-      const msg = result.exists
-        ? `Você já tem um ticket aberto: <#${result.channelId}>`
-        : `✅ Ticket criado! <#${result.channelId}>`
+      // Responde em <3s com "carregando" e depois edita — evita retry do Discord
+      const appId = body.application_id
+      const token = body.token
+      ;(async () => {
+        const result = await createTicket(userId, username)
+        const msg = result.exists
+          ? `Você já tem um ticket aberto: <#${result.channelId}>`
+          : `✅ Ticket criado! <#${result.channelId}>`
+        await fetch(`https://discord.com/api/v10/webhooks/${appId}/${token}/messages/@original`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: msg }),
+        })
+      })().catch(console.error)
       return NextResponse.json({
-        type: 4,
-        data: { content: msg, flags: 64 }, // 64 = ephemeral
+        type: 5, // deferred ephemeral — mostra "..." enquanto processa
+        data: { flags: 64 },
       })
     }
 
