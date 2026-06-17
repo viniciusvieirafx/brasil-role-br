@@ -1,6 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 
+async function getVipTier(userId: string): Promise<number> {
+  const guildId = process.env.DISCORD_GUILD_ID!
+  const botToken = process.env.DISCORD_BOT_TOKEN!
+  const vip1 = process.env.DISCORD_VIP_ROLE_ID!
+  const vip2 = process.env.DISCORD_VIP2_ROLE_ID!
+  const vip3 = process.env.DISCORD_VIP3_ROLE_ID!
+
+  try {
+    const res = await fetch(`https://discord.com/api/v10/guilds/${guildId}/members/${userId}`, {
+      headers: { Authorization: `Bot ${botToken}` },
+    })
+    if (!res.ok) return 0
+    const member = await res.json()
+    const roles: string[] = member.roles ?? []
+    if (roles.includes(vip3)) return 3
+    if (roles.includes(vip2)) return 2
+    if (roles.includes(vip1)) return 1
+    return 0
+  } catch {
+    return 0
+  }
+}
+
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code')
   const baseUrl = new URL('/', req.url).toString()
@@ -17,7 +40,7 @@ export async function GET(req: NextRequest) {
       client_secret: process.env.DISCORD_CLIENT_SECRET!,
       code,
       grant_type: 'authorization_code',
-      redirect_uri: process.env.DISCORD_REDIRECT_URI!,
+      redirect_uri: `${new URL(req.url).origin}/api/auth/callback`,
     }),
   })
 
@@ -31,8 +54,9 @@ export async function GET(req: NextRequest) {
   })
   const user = await userRes.json()
 
+  const vipTier = await getVipTier(user.id)
+
   const cookieStore = await cookies()
-  // Prefer state param (survives cross-site redirects); fall back to cookie for old flows
   const stateParam = req.nextUrl.searchParams.get('state')
   const origin = stateParam ? decodeURIComponent(stateParam) : (cookieStore.get('auth_origin')?.value ?? 'vip')
 
@@ -41,6 +65,7 @@ export async function GET(req: NextRequest) {
     username: user.username,
     avatar: user.avatar,
     globalName: user.global_name,
+    vipTier,
   }), {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -50,5 +75,8 @@ export async function GET(req: NextRequest) {
   })
 
   cookieStore.set('auth_origin', '', { maxAge: 0, path: '/' })
+  if (origin.startsWith('/')) {
+    return NextResponse.redirect(`${baseUrl.replace(/\/$/, '')}${origin}`)
+  }
   return NextResponse.redirect(`${baseUrl}#${origin}`)
 }

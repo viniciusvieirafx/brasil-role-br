@@ -35,7 +35,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const serverLang = countryToLang(country)
 
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
       <body className={`${inter.className} bg-br-dark text-white`}>
         <LanguageProvider serverLang={serverLang}>
           <ClickSound />
