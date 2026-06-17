@@ -176,6 +176,12 @@ export async function notificarVencedores(
         `Seu prêmio de **${premioDias} dias de VIP** já foi ativado automaticamente na sua conta! Aproveite todos os benefícios!\n\n` +
         `🔗 ${siteUrl}\n\n` +
         `Obrigado por participar! 🇧🇷`
+      : premio
+      ? `🎉 **Parabéns ${v.nome}! Você ganhou o sorteio do Brasil Role BR!**\n\n` +
+        `Seu prêmio: **${premio}**\n\n` +
+        `Entre em contato com os organizadores do grupo para resgatar seu prêmio.\n\n` +
+        `🔗 ${siteUrl}\n\n` +
+        `Obrigado por participar! 🇧🇷`
       : `🎉 **Parabéns ${v.nome}! Você ganhou o sorteio do Brasil Role BR!**\n\n` +
         `Entre em contato com a equipe para resgatar seu prêmio.\n\n` +
         `🔗 ${siteUrl}\n\n` +
@@ -199,6 +205,11 @@ async function postChannel(channelId: string, body: object) {
   })
 }
 
+function labelPremio(sorteio: GrupoSorteio): string {
+  if (sorteio.tipoPremio === 'outro') return sorteio.descricaoPremio || 'Prêmio especial'
+  return `${sorteio.premioDias} dias de VIP`
+}
+
 /** Anúncio inicial do sorteio no canal do grupo (com botão para o site) */
 export async function anunciarSorteioGrupo(grupo: Grupo, sorteio: GrupoSorteio): Promise<void> {
   if (!grupo.canalId) return
@@ -216,7 +227,7 @@ export async function anunciarSorteioGrupo(grupo: Grupo, sorteio: GrupoSorteio):
       color: 0x5865F2,
       fields: [
         { name: '🏆 Vencedores', value: `${sorteio.numVencedores}`, inline: true },
-        { name: '🎁 Prêmio', value: `${sorteio.premioDias} dias de VIP`, inline: true },
+        { name: '🎁 Prêmio', value: labelPremio(sorteio), inline: true },
         { name: '📅 Encerra', value: expiraStr, inline: false },
         { name: '✅ Requisito', value: 'Conta VRChat verificada em brasil-role-br.com', inline: false },
       ],
@@ -285,7 +296,10 @@ export async function anunciarVencedoresGrupo(
     }
   }
 
-  fields.push({ name: '🎁 Prêmio', value: `**${sorteio.premioDias} dias de VIP** já ativados!`, inline: true })
+  const premioLabel = sorteio.tipoPremio === 'outro'
+    ? (sorteio.descricaoPremio || 'Prêmio especial')
+    : `**${sorteio.premioDias} dias de VIP** já ativados!`
+  fields.push({ name: '🎁 Prêmio', value: premioLabel, inline: true })
   fields.push({ name: '👥 Participantes', value: `${sorteio.participantes.length} pessoas participaram`, inline: true })
 
   const content = vencedores.length === 1

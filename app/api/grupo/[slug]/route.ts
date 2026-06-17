@@ -31,6 +31,8 @@ export async function GET(
     descricao: sorteio.descricao,
     expiraEm: sorteio.expiraEm,
     numVencedores: sorteio.numVencedores,
+    tipoPremio: sorteio.tipoPremio ?? 'vip',
+    descricaoPremio: sorteio.descricaoPremio ?? '',
     premioDias: sorteio.premioDias,
     totalParticipantes: sorteio.participantes.length,
     sorteado: sorteio.sorteado,

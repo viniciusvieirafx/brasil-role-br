@@ -14,6 +14,8 @@ type GrupoSorteio = {
   descricao: string
   expiraEm: string | null
   numVencedores: number
+  tipoPremio: 'vip' | 'outro'
+  descricaoPremio: string
   premioDias: number
   participantes: string[]
   sorteado: boolean
@@ -57,6 +59,8 @@ export default function ControleGrupoPage() {
   const [formNumVencedores, setFormNumVencedores] = useState('1')
   const [formExpiraEm, setFormExpiraEm] = useState('')
   const [formPremioDias, setFormPremioDias] = useState('30')
+  const [formTipoPremio, setFormTipoPremio] = useState<'vip' | 'outro'>('vip')
+  const [formDescricaoPremio, setFormDescricaoPremio] = useState('')
   const [erroSorteio, setErroSorteio] = useState('')
   const [loadingCriar, setLoadingCriar] = useState(false)
 
@@ -159,6 +163,8 @@ export default function ControleGrupoPage() {
         numVencedores: parseInt(formNumVencedores) || 1,
         expiraEm: formExpiraEm || null,
         premioDias: 30,
+        tipoPremio: formTipoPremio,
+        descricaoPremio: formDescricaoPremio,
       }),
     })
     const data = await res.json()
@@ -168,6 +174,8 @@ export default function ControleGrupoPage() {
       setFormNumVencedores('1')
       setFormExpiraEm('')
       setFormPremioDias('30')
+      setFormTipoPremio('vip')
+      setFormDescricaoPremio('')
       await carregarDados()
     } else {
       setErroSorteio(data.error ?? 'Erro ao criar sorteio')
@@ -378,7 +386,7 @@ export default function ControleGrupoPage() {
         <div className="bg-br-dark2 border border-white/10 rounded-2xl p-5">
           <div className="flex items-center justify-between mb-4">
             <p className="text-white/40 text-xs uppercase tracking-wider">Sorteio Ativo</p>
-            {!sorteio && (grupo?.vipsDisponiveis ?? 0) > 0 && !criando && (
+            {!sorteio && !criando && (
               <button
                 onClick={() => setCriando(true)}
                 className="bg-br-yellow text-black font-bold px-4 py-1.5 rounded-lg hover:brightness-110 transition-all text-xs"
@@ -390,6 +398,55 @@ export default function ControleGrupoPage() {
 
           {criando ? (
             <form onSubmit={handleCriarSorteio} className="space-y-4">
+              {/* Tipo de prêmio */}
+              <div>
+                <label className="block text-white/60 text-xs mb-2">Tipo de Prêmio</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFormTipoPremio('vip')}
+                    className={`py-2.5 rounded-lg border text-sm font-semibold transition-all ${
+                      formTipoPremio === 'vip'
+                        ? 'bg-br-yellow/20 border-br-yellow text-br-yellow'
+                        : 'bg-black/20 border-white/10 text-white/40 hover:text-white/60'
+                    }`}
+                  >
+                    👑 VIP
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormTipoPremio('outro')}
+                    className={`py-2.5 rounded-lg border text-sm font-semibold transition-all ${
+                      formTipoPremio === 'outro'
+                        ? 'bg-purple-500/20 border-purple-400 text-purple-300'
+                        : 'bg-black/20 border-white/10 text-white/40 hover:text-white/60'
+                    }`}
+                  >
+                    🎁 Outro prêmio
+                  </button>
+                </div>
+              </div>
+
+              {formTipoPremio === 'vip' && (grupo?.vipsDisponiveis ?? 0) === 0 && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 text-red-400 text-xs">
+                  Sem VIPs disponíveis. Escolha &quot;Outro prêmio&quot; ou peça VIPs à administração.
+                </div>
+              )}
+
+              {formTipoPremio === 'outro' && (
+                <div>
+                  <label className="block text-white/60 text-xs mb-1.5">Descrição do Prêmio</label>
+                  <input
+                    type="text"
+                    value={formDescricaoPremio}
+                    onChange={e => setFormDescricaoPremio(e.target.value)}
+                    className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-400/40"
+                    placeholder="Ex: Key do jogo X, Skin exclusiva, R$50 em créditos..."
+                    required
+                  />
+                </div>
+              )}
+
               <div>
                 <label className="block text-white/60 text-xs mb-1.5">Aviso / Descrição</label>
                 <textarea
@@ -404,7 +461,8 @@ export default function ControleGrupoPage() {
               <div>
                 <label className="block text-white/60 text-xs mb-1.5">Nº de Ganhadores</label>
                 <input
-                  type="number" min="1" max={grupo?.vipsDisponiveis ?? 1}
+                  type="number" min="1"
+                  max={formTipoPremio === 'vip' ? (grupo?.vipsDisponiveis ?? 1) : 99}
                   value={formNumVencedores}
                   onChange={e => setFormNumVencedores(e.target.value)}
                   className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-br-yellow/40"
@@ -423,14 +481,14 @@ export default function ControleGrupoPage() {
               <div className="flex gap-2">
                 <button
                   type="submit"
-                  disabled={loadingCriar}
+                  disabled={loadingCriar || (formTipoPremio === 'vip' && (grupo?.vipsDisponiveis ?? 0) === 0)}
                   className="flex-1 bg-br-yellow text-black font-bold py-2.5 rounded-lg hover:brightness-110 transition-all text-sm disabled:opacity-50"
                 >
                   {loadingCriar ? 'Criando...' : '🎲 Criar e Anunciar no Discord'}
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setCriando(false); setErroSorteio('') }}
+                  onClick={() => { setCriando(false); setErroSorteio(''); setFormTipoPremio('vip'); setFormDescricaoPremio('') }}
                   className="px-4 py-2.5 border border-white/10 rounded-lg text-white/50 hover:text-white/70 text-sm transition-colors"
                 >
                   Cancelar
@@ -440,11 +498,7 @@ export default function ControleGrupoPage() {
           ) : !sorteio ? (
             <div className="text-center py-8">
               <div className="text-4xl mb-3">🎲</div>
-              <p className="text-white/40 text-sm">
-                {(grupo?.vipsDisponiveis ?? 0) === 0
-                  ? 'Sem VIPs disponíveis para criar um sorteio.'
-                  : 'Nenhum sorteio ativo. Crie um novo!'}
-              </p>
+              <p className="text-white/40 text-sm">Nenhum sorteio ativo. Crie um novo!</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -479,8 +533,19 @@ export default function ControleGrupoPage() {
                   <p className="text-white/40 text-xs mt-0.5">ganhadores</p>
                 </div>
                 <div className="bg-black/20 rounded-xl p-3 text-center">
-                  <p className="text-2xl font-bold text-white">{sorteio.premioDias}d</p>
-                  <p className="text-white/40 text-xs mt-0.5">VIP</p>
+                  {(sorteio.tipoPremio ?? 'vip') === 'vip' ? (
+                    <>
+                      <p className="text-2xl font-bold text-white">{sorteio.premioDias}d</p>
+                      <p className="text-white/40 text-xs mt-0.5">VIP</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-lg font-bold text-purple-300 leading-tight truncate">🎁</p>
+                      <p className="text-white/40 text-xs mt-0.5 truncate" title={sorteio.descricaoPremio}>
+                        {sorteio.descricaoPremio || 'Prêmio especial'}
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
 

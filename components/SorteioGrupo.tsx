@@ -14,6 +14,8 @@ interface SorteioData {
   descricao: string
   expiraEm: string | null
   numVencedores: number
+  tipoPremio: 'vip' | 'outro'
+  descricaoPremio: string
   premioDias: number
   totalParticipantes: number
   sorteado: boolean
@@ -144,10 +146,17 @@ export default function SorteioGrupo({
             </div>
 
             <div className="flex flex-wrap gap-3 mb-6">
-              <div className="flex items-center gap-2 bg-br-yellow/10 border border-br-yellow/30 rounded-full px-4 py-1.5 text-sm text-br-yellow font-semibold">
-                <span>🎁</span>
-                {sorteio.premioDias} dias de VIP
-              </div>
+              {(sorteio.tipoPremio ?? 'vip') === 'vip' ? (
+                <div className="flex items-center gap-2 bg-br-yellow/10 border border-br-yellow/30 rounded-full px-4 py-1.5 text-sm text-br-yellow font-semibold">
+                  <span>👑</span>
+                  {sorteio.premioDias} dias de VIP
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 bg-purple-500/10 border border-purple-400/30 rounded-full px-4 py-1.5 text-sm text-purple-300 font-semibold">
+                  <span>🎁</span>
+                  {sorteio.descricaoPremio || 'Prêmio especial'}
+                </div>
+              )}
               <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-sm text-white/60">
                 <span>🏆</span>
                 {sorteio.numVencedores} {sorteio.numVencedores === 1 ? 'ganhador' : 'ganhadores'}

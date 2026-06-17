@@ -40,6 +40,8 @@ export default async function SorteioGrupoPage({
     descricao: sorteioFull.descricao,
     expiraEm: sorteioFull.expiraEm,
     numVencedores: sorteioFull.numVencedores,
+    tipoPremio: sorteioFull.tipoPremio ?? 'vip' as const,
+    descricaoPremio: sorteioFull.descricaoPremio ?? '',
     premioDias: sorteioFull.premioDias,
     totalParticipantes: sorteioFull.participantes.length,
     sorteado: sorteioFull.sorteado,

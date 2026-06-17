@@ -30,16 +30,19 @@ export async function POST(req: NextRequest) {
   sorteio.vencedores = vencedores
   await saveGrupoSorteio(sorteio)
 
-  // Conceder VIP para os vencedores
-  await Promise.all(vencedores.map(v => concederVip(v.id, sorteio.premioDias)))
+  const tipoPremio = sorteio.tipoPremio ?? 'vip'
 
-  // Descontar VIPs disponíveis do grupo
-  grupo.vipsDisponiveis = Math.max(0, grupo.vipsDisponiveis - vencedores.length)
-  await saveGrupo(grupo)
+  if (tipoPremio === 'vip') {
+    // Conceder VIP para os vencedores e descontar do pool do grupo
+    await Promise.all(vencedores.map(v => concederVip(v.id, sorteio.premioDias)))
+    grupo.vipsDisponiveis = Math.max(0, grupo.vipsDisponiveis - vencedores.length)
+    await saveGrupo(grupo)
+  }
 
   // Notificar vencedores por DM
   try {
-    await notificarVencedores(vencedores, 'vip', sorteio.premioDias)
+    const premioNotif = tipoPremio === 'vip' ? 'vip' : sorteio.descricaoPremio ?? null
+    await notificarVencedores(vencedores, premioNotif, sorteio.premioDias)
   } catch (e) {
     console.error('[grupo/sortear] Falha ao notificar DMs:', e)
   }

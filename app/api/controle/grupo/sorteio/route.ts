@@ -34,30 +34,36 @@ export async function POST(req: NextRequest) {
   const grupo = await getGrupo(slug)
   if (!grupo) return NextResponse.json({ error: 'Grupo não encontrado' }, { status: 404 })
 
-  if (grupo.vipsDisponiveis <= 0) {
-    return NextResponse.json({ error: 'Sem VIPs disponíveis para criar sorteio' }, { status: 403 })
-  }
-
   const existente = await getGrupoSorteioAtivo(slug)
   if (existente && !existente.sorteado) {
     return NextResponse.json({ error: 'Já existe um sorteio ativo' }, { status: 400 })
   }
 
   const body = await req.json()
-  const { descricao, numVencedores, expiraEm } = body
+  const { descricao, numVencedores, expiraEm, tipoPremio, descricaoPremio } = body
 
   if (!descricao?.trim()) {
     return NextResponse.json({ error: 'Aviso/descrição obrigatório' }, { status: 400 })
   }
 
+  const tipo: 'vip' | 'outro' = tipoPremio === 'outro' ? 'outro' : 'vip'
   const numV = Math.max(1, parseInt(numVencedores) || 1)
-  const dias  = 30 // sempre 30 dias por vencedor
+  const dias = 30
 
-  if (numV > grupo.vipsDisponiveis) {
-    return NextResponse.json(
-      { error: `Você tem apenas ${grupo.vipsDisponiveis} VIP(s) disponível(is)` },
-      { status: 400 }
-    )
+  if (tipo === 'vip') {
+    if (grupo.vipsDisponiveis <= 0) {
+      return NextResponse.json({ error: 'Sem VIPs disponíveis para criar sorteio de VIP' }, { status: 403 })
+    }
+    if (numV > grupo.vipsDisponiveis) {
+      return NextResponse.json(
+        { error: `Você tem apenas ${grupo.vipsDisponiveis} VIP(s) disponível(is)` },
+        { status: 400 }
+      )
+    }
+  }
+
+  if (tipo === 'outro' && !descricaoPremio?.trim()) {
+    return NextResponse.json({ error: 'Descreva o prêmio do sorteio' }, { status: 400 })
   }
 
   const id = randomUUID()
@@ -68,6 +74,8 @@ export async function POST(req: NextRequest) {
     descricao: descricao.trim(),
     expiraEm: expiraEm ?? null,
     numVencedores: numV,
+    tipoPremio: tipo,
+    descricaoPremio: tipo === 'outro' ? descricaoPremio.trim() : '',
     premioDias: dias,
     participantes: [] as string[],
     sorteado: false,
@@ -103,6 +111,7 @@ export async function PATCH(req: NextRequest) {
   if (body.numVencedores !== undefined) sorteio.numVencedores = Math.max(1, parseInt(body.numVencedores) || 1)
   if (body.expiraEm !== undefined) sorteio.expiraEm = body.expiraEm || null
   if (body.premioDias !== undefined) sorteio.premioDias = Math.max(1, parseInt(body.premioDias) || 30)
+  if (body.descricaoPremio !== undefined) sorteio.descricaoPremio = body.descricaoPremio
 
   await saveGrupoSorteio(sorteio)
   return NextResponse.json({ ok: true })

@@ -17,6 +17,8 @@ export type GrupoSorteio = {
   descricao: string
   expiraEm: string | null
   numVencedores: number
+  tipoPremio: 'vip' | 'outro'
+  descricaoPremio: string
   premioDias: number
   participantes: string[]
   sorteado: boolean
