@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { isUserVerified } from '@/lib/discord'
 
+const TIER_CONFIG: Record<number, { amount: number; description: string }> = {
+  1: { amount: 5.0,  description: 'VIP Bronze Brasil Role BR - 30 dias' },
+  2: { amount: 15.0, description: 'VIP Prata Brasil Role BR - 30 dias'  },
+  3: { amount: 25.0, description: 'VIP Ouro Brasil Role BR - 30 dias'   },
+}
+
 export async function POST(req: NextRequest) {
   const cookieStore = await cookies()
   const discordUserCookie = cookieStore.get('discord_user')
@@ -18,7 +24,12 @@ export async function POST(req: NextRequest) {
       { status: 403 }
     )
   }
-  const idempotencyKey = `brb-${discordUser.id}-${Date.now()}`
+
+  const body = await req.json().catch(() => ({}))
+  const tier: number = [1, 2, 3].includes(body.tier) ? body.tier : 1
+  const { amount, description } = TIER_CONFIG[tier]
+
+  const idempotencyKey = `brb-${discordUser.id}-t${tier}-${Date.now()}`
 
   const host = req.headers.get('host') ?? 'brasil-role-br.com'
   const baseUrl = `https://${host}`
@@ -31,11 +42,11 @@ export async function POST(req: NextRequest) {
       'X-Idempotency-Key': idempotencyKey,
     },
     body: JSON.stringify({
-      transaction_amount: 5.0,
-      description: 'VIP Brasil Role BR - 30 dias',
+      transaction_amount: amount,
+      description,
       payment_method_id: 'pix',
       payer: { email: 'pagamento@brasil-role-br.com' },
-      external_reference: `discord-${discordUser.id}`,
+      external_reference: `discord-${discordUser.id}-t${tier}`,
       notification_url: `${baseUrl}/api/webhook`,
     }),
   })
@@ -53,8 +64,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'QR code não gerado pelo Mercado Pago' }, { status: 500 })
   }
 
-  return NextResponse.json({
-    paymentId: data.id,
-    qrCode,
-  })
+  return NextResponse.json({ paymentId: data.id, qrCode })
 }

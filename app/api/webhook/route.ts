@@ -3,8 +3,21 @@ import { kvGet, kvSet } from '@/lib/kv'
 
 const NOTIFY_CHANNEL = '1480918950404423835'
 
+const TIER_NAMES: Record<number, string> = {
+  1: 'VIP Bronze',
+  2: 'VIP Prata',
+  3: 'VIP Ouro',
+}
+
+const TIER_COLORS: Record<number, number> = {
+  1: 0xCD7F32,
+  2: 0xC0C0C0,
+  3: 0xFFD700,
+}
+
 async function notifyVipPurchase(
   discordUserId: string,
+  tier: number,
   amount: number,
   paymentMethod: string,
   expiresAt: string,
@@ -23,6 +36,7 @@ async function notifyVipPurchase(
     bank_transfer: 'Transferência',
   }
   const method = methodLabel[paymentMethod] ?? paymentMethod
+  const tierName = TIER_NAMES[tier] ?? `VIP Tier ${tier}`
 
   await fetch(`https://discord.com/api/v10/channels/${NOTIFY_CHANNEL}/messages`, {
     method: 'POST',
@@ -32,13 +46,14 @@ async function notifyVipPurchase(
     },
     body: JSON.stringify({
       embeds: [{
-        title: '💎 Novo VIP Ativado',
-        color: 0xFFD700,
+        title: `💎 Novo ${tierName} Ativado`,
+        color: TIER_COLORS[tier] ?? 0xFFD700,
         fields: [
-          { name: '👤 Usuário', value: `${displayName} (<@${discordUserId}>)`, inline: true },
-          { name: '💰 Valor', value: `R$ ${amount.toFixed(2)}`, inline: true },
-          { name: '💳 Pagamento', value: method, inline: true },
-          { name: '📅 Vence em', value: expiresAt, inline: true },
+          { name: '👤 Usuário',   value: `${displayName} (<@${discordUserId}>)`, inline: true },
+          { name: '🏅 Plano',     value: tierName,                               inline: true },
+          { name: '💰 Valor',     value: `R$ ${amount.toFixed(2)}`,              inline: true },
+          { name: '💳 Pagamento', value: method,                                 inline: true },
+          { name: '📅 Vence em',  value: expiresAt,                              inline: true },
         ],
         footer: { text: 'Brasil Role BR · VIP' },
         timestamp: new Date().toISOString(),
@@ -74,9 +89,32 @@ export async function POST(req: NextRequest) {
   }
 
   const discordUserId = match[1]
-  const roleId = process.env.DISCORD_VIP_ROLE_ID!
 
-  // Adiciona cargo VIP no Discord
+  // Detecta tier pelo external_reference (novo: discord-{id}-t{tier}, legado: discord-{id})
+  const tierMatch = ref.match(/-t(\d+)$/)
+  const tier = tierMatch ? parseInt(tierMatch[1]) : 1
+
+  const roleByTier: Record<number, string | undefined> = {
+    1: process.env.DISCORD_VIP_ROLE_ID,
+    2: process.env.DISCORD_VIP2_ROLE_ID,
+    3: process.env.DISCORD_VIP3_ROLE_ID,
+  }
+  const roleId = roleByTier[tier] ?? process.env.DISCORD_VIP_ROLE_ID!
+
+  // Remove cargos de tiers inferiores (se estiver fazendo upgrade)
+  const lowerRoles = [
+    tier > 1 ? process.env.DISCORD_VIP_ROLE_ID  : undefined,
+    tier > 2 ? process.env.DISCORD_VIP2_ROLE_ID : undefined,
+  ].filter(Boolean) as string[]
+
+  for (const lowerRoleId of lowerRoles) {
+    await fetch(
+      `https://discord.com/api/v10/guilds/${process.env.DISCORD_GUILD_ID}/members/${discordUserId}/roles/${lowerRoleId}`,
+      { method: 'DELETE', headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` } }
+    ).catch(() => {})
+  }
+
+  // Adiciona cargo VIP do tier correto
   const roleRes = await fetch(
     `https://discord.com/api/v10/guilds/${process.env.DISCORD_GUILD_ID}/members/${discordUserId}/roles/${roleId}`,
     {
@@ -89,7 +127,7 @@ export async function POST(req: NextRequest) {
   )
   if (!roleRes.ok) {
     const errBody = await roleRes.text().catch(() => '')
-    console.error(`[webhook] FALHA ao adicionar cargo VIP para ${discordUserId}: HTTP ${roleRes.status} ${errBody}`)
+    console.error(`[webhook] FALHA ao adicionar cargo VIP tier ${tier} para ${discordUserId}: HTTP ${roleRes.status} ${errBody}`)
   }
 
   // Salva vencimento (30 dias) no Redis — limpa optOut para reativar lembretes
@@ -102,12 +140,14 @@ export async function POST(req: NextRequest) {
     ...existing,
     expiresAt:   expiresStr,
     roleId,
+    tier,
     optOut:      false,
     ultimoAviso: undefined,
   }))
 
   await notifyVipPurchase(
     discordUserId,
+    tier,
     payment.transaction_amount,
     payment.payment_method_id,
     expiresStr,

@@ -67,6 +67,26 @@ export function loadData(discordId: string): PetPlayerData {
 export function saveData(data: PetPlayerData) {
   if (typeof window === 'undefined') return
   localStorage.setItem(KEY(data.discordId), JSON.stringify(data))
+  // Sincroniza com servidor de forma assíncrona
+  syncToServer(data).catch(() => {})
+}
+
+export async function syncToServer(data: PetPlayerData): Promise<void> {
+  await fetch('/api/pets/data', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
+export async function loadFromServer(): Promise<PetPlayerData | null> {
+  try {
+    const res = await fetch('/api/pets/data')
+    if (!res.ok) return null
+    return await res.json()
+  } catch {
+    return null
+  }
 }
 
 function empty(discordId: string): PetPlayerData {

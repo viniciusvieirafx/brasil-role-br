@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import PetAnimator, { type AnimType } from '@/components/pets/PetAnimator'
 import {
-  loadData, saveData, giveFirstEgg,
+  loadData, saveData, giveFirstEgg, loadFromServer,
   type PetPlayerData, type PetInstance,
 } from '@/lib/petStore'
 import { getPet, RARITY_STYLE, ELEMENT_EMOJI, ELEMENT_COLOR, CAPSULE_COST } from '@/lib/petData'
@@ -57,9 +57,17 @@ export default function PetHub({ initialUser }: { initialUser: DiscordUser | nul
 
   useEffect(() => {
     if (!initialUser) return
-    const d = loadData(initialUser.id)
-    setData(d)
-    if (d.activePetId) setActivePetObj(d.ownedPets.find(p => p.instanceId === d.activePetId) ?? null)
+    // Carrega localStorage imediatamente (sem delay)
+    const local = loadData(initialUser.id)
+    setData(local)
+    if (local.activePetId) setActivePetObj(local.ownedPets.find(p => p.instanceId === local.activePetId) ?? null)
+    // Depois tenta sincronizar com o servidor (cross-device)
+    loadFromServer().then(server => {
+      if (!server) return
+      saveData(server) // atualiza localStorage com dados do servidor
+      setData(server)
+      setActivePetObj(server.activePetId ? (server.ownedPets.find(p => p.instanceId === server.activePetId) ?? null) : null)
+    }).catch(() => {})
   }, [initialUser])
 
   // Incubation countdown
