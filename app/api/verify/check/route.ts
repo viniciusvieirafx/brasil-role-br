@@ -23,17 +23,26 @@ async function getVRChatUser(username: string): Promise<{ bio: string; displayNa
 }
 
 async function addDiscordRole(userId: string) {
-  await fetch(
+  const res = await fetch(
     `https://discord.com/api/v10/guilds/${process.env.DISCORD_GUILD_ID}/members/${userId}/roles/${process.env.DISCORD_VERIFIED_ROLE_ID}`,
     { method: 'PUT', headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`, 'Content-Type': 'application/json' } }
   )
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    console.error(`[verify] FALHA ao adicionar cargo para ${userId}: HTTP ${res.status} ${body}`)
+    throw new Error(`Erro ao ativar cargo no Discord (${res.status}). Tente novamente ou contate o suporte.`)
+  }
 }
 
 async function changeDiscordNickname(userId: string, nickname: string) {
-  await fetch(
+  const res = await fetch(
     `https://discord.com/api/v10/guilds/${process.env.DISCORD_GUILD_ID}/members/${userId}`,
     { method: 'PATCH', headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ nick: nickname }) }
   )
+  if (!res.ok) {
+    console.error(`[verify] Falha ao mudar nick de ${userId}: HTTP ${res.status}`)
+    // Não bloqueia a verificação por causa do nick
+  }
 }
 
 async function sendDiscordNotification(discordUser: { id: string; username: string; globalName: string | null }, vrchatName: string) {
@@ -82,8 +91,14 @@ export async function POST(_req: NextRequest) {
     return NextResponse.json({ verified: false, error: 'Código não encontrado na bio. Certifique-se que salvou o perfil no VRChat.' })
   }
 
-  await Promise.all([
-    addDiscordRole(discordUser.id),
+  try {
+    await addDiscordRole(discordUser.id)
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 })
+  }
+
+  // Nick e notificação são best-effort — não bloqueiam
+  await Promise.allSettled([
     changeDiscordNickname(discordUser.id, vrchatUser.displayName),
     sendDiscordNotification(discordUser, vrchatUser.displayName),
   ])
