@@ -1,16 +1,18 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import PetAnimator, { type AnimType } from '@/components/pets/PetAnimator'
 import {
   loadData, saveData, giveFirstEgg, startIncubation, loadFromServer,
-  type PetPlayerData, type PetInstance,
+  updateActivePetStats, addNotification, markAllRead, dismissNotification,
+  type PetPlayerData, type PetInstance, type PetNotification,
 } from '@/lib/petStore'
 import { getPet, RARITY_STYLE, ELEMENT_EMOJI, ELEMENT_COLOR, CAPSULE_COST } from '@/lib/petData'
 import { formatTimeLeft, incubationSecondsLeft } from '@/lib/petStore'
 import { playClick, playSuccess } from '@/lib/sounds'
+import type { ServerNotification } from '@/app/api/pets/notifications/route'
 
 interface DiscordUser { id: string; username: string; avatar: string | null; globalName: string | null }
 
@@ -56,6 +58,47 @@ function VipBadge({ tier }: { tier: number }) {
   )
 }
 
+// ── Barra de status Tamagotchi ────────────────────────────────────────────────
+function StatBar({ label, icon, value, colorClass }: { label: string; icon: string; value: number; colorClass: string }) {
+  return (
+    <div className="flex-1">
+      <div className="flex items-center justify-between text-xs text-zinc-400 mb-1">
+        <span className="flex items-center gap-1">{icon} {label}</span>
+        <span className="font-bold text-white">{Math.round(value)}%</span>
+      </div>
+      <div className="h-2.5 bg-zinc-700/60 rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-700 ${colorClass}`}
+          style={{ width: `${value}%` }}
+        />
+      </div>
+    </div>
+  )
+}
+
+function petMood(hunger: number, dirty: number): string {
+  const avg = hunger - dirty / 2
+  if (avg >= 70) return '😊'
+  if (avg >= 40) return '😐'
+  if (avg >= 15) return '😢'
+  return '😵'
+}
+
+// ── Notificações locais ────────────────────────────────────────────────────────
+const NOTIF_ICON: Record<string, string> = {
+  egg_ready:       '🥚',
+  battle_win:      '🏆',
+  battle_defended: '🛡️',
+}
+
+function timeAgo(ts: number): string {
+  const secs = Math.floor((Date.now() - ts) / 1000)
+  if (secs < 60) return 'agora'
+  if (secs < 3600) return `${Math.floor(secs / 60)}m atrás`
+  if (secs < 86400) return `${Math.floor(secs / 3600)}h atrás`
+  return `${Math.floor(secs / 86400)}d atrás`
+}
+
 // ── Bichinho animado (cicla idle → walk → idle) ────────────────────────────────
 function LivePet({ petId }: { petId: number }) {
   const [anim, setAnim] = useState<AnimType>('idle')
@@ -98,29 +141,81 @@ export default function PetHub({ initialUser, vipTier = 0 }: { initialUser: Disc
   const [data, setData] = useState<PetPlayerData | null>(null)
   const [activePet, setActivePetObj] = useState<PetInstance | null>(null)
   const [secsLeft, setSecsLeft] = useState(0)
+  const [eggNotified, setEggNotified] = useState(false)
+
+  function applyAndSave(updated: PetPlayerData) {
+    saveData(updated)
+    setData(updated)
+    setActivePetObj(updated.activePetId ? (updated.ownedPets.find(p => p.instanceId === updated.activePetId) ?? null) : null)
+  }
 
   useEffect(() => {
     if (!initialUser) return
     // Carrega localStorage imediatamente (sem delay)
-    const local = loadData(initialUser.id)
+    const local = updateActivePetStats(loadData(initialUser.id))
     setData(local)
-    if (local.activePetId) setActivePetObj(local.ownedPets.find(p => p.instanceId === local.activePetId) ?? null)
+    setActivePetObj(local.activePetId ? (local.ownedPets.find(p => p.instanceId === local.activePetId) ?? null) : null)
     // Depois tenta sincronizar com o servidor (cross-device)
     loadFromServer().then(server => {
       if (!server) return
-      saveData(server) // atualiza localStorage com dados do servidor
-      setData(server)
-      setActivePetObj(server.activePetId ? (server.ownedPets.find(p => p.instanceId === server.activePetId) ?? null) : null)
+      const synced = updateActivePetStats(server)
+      saveData(synced)
+      setData(synced)
+      setActivePetObj(synced.activePetId ? (synced.ownedPets.find(p => p.instanceId === synced.activePetId) ?? null) : null)
     }).catch(() => {})
+
+    // Busca notificações server-push (battle_defended) e mescla localmente
+    fetch('/api/pets/notifications')
+      .then(r => r.ok ? r.json() : [])
+      .then((serverNotifs: ServerNotification[]) => {
+        if (!serverNotifs.length) return
+        setData(prev => {
+          if (!prev) return prev
+          let updated = prev
+          for (const n of serverNotifs) {
+            updated = addNotification(updated, n.type as PetNotification['type'], n.message)
+          }
+          saveData(updated)
+          return updated
+        })
+      })
+      .catch(() => {})
   }, [initialUser])
 
-  // Incubation countdown
+  // Atualiza stats de fome/sujeira a cada minuto
   useEffect(() => {
-    if (!data?.incubating) return
-    const id = setInterval(() => setSecsLeft(incubationSecondsLeft(data.incubating!)), 1000)
+    if (!initialUser || !data?.activePetId) return
+    const id = setInterval(() => {
+      setData(prev => {
+        if (!prev) return prev
+        const updated = updateActivePetStats(prev)
+        saveData(updated)
+        setActivePetObj(updated.ownedPets.find(p => p.instanceId === updated.activePetId) ?? null)
+        return updated
+      })
+    }, 60_000)
+    return () => clearInterval(id)
+  }, [initialUser, data?.activePetId])
+
+  // Incubation countdown + notificação quando ovo fica pronto
+  useEffect(() => {
+    if (!data?.incubating) { setEggNotified(false); return }
+    const id = setInterval(() => {
+      const secs = incubationSecondsLeft(data.incubating!)
+      setSecsLeft(secs)
+      if (secs === 0 && !eggNotified) {
+        setEggNotified(true)
+        setData(prev => {
+          if (!prev) return prev
+          const updated = addNotification(prev, 'egg_ready', 'Seu ovo está pronto para eclodir! Vá até a página de ovos.')
+          saveData(updated)
+          return updated
+        })
+      }
+    }, 1000)
     setSecsLeft(incubationSecondsLeft(data.incubating))
     return () => clearInterval(id)
-  }, [data?.incubating])
+  }, [data?.incubating, eggNotified])
 
   function handleStart() {
     if (!initialUser || !data) return
@@ -128,8 +223,7 @@ export default function PetHub({ initialUser, vipTier = 0 }: { initialUser: Disc
     const withEgg = giveFirstEgg(data)
     const firstEgg = withEgg.ownedEggs[withEgg.ownedEggs.length - 1]
     const updated = startIncubation(withEgg, firstEgg.instanceId)
-    saveData(updated)
-    setData(updated)
+    applyAndSave(updated)
     router.push('/pets/ovos')
   }
 
@@ -222,6 +316,46 @@ export default function PetHub({ initialUser, vipTier = 0 }: { initialUser: Disc
 
             {/* Bichinho animado */}
             <LivePet petId={activePet.petId} />
+
+            {/* Tamagotchi stats */}
+            <div className="px-1 pb-3 space-y-2">
+              <div className="flex items-center gap-1 mb-1">
+                <span className="text-sm">{petMood(activePet.hunger ?? 100, activePet.dirty ?? 0)}</span>
+                <span className="text-zinc-500 text-xs">Humor</span>
+              </div>
+              <div className="flex gap-3">
+                <StatBar
+                  label="Fome"
+                  icon="🍖"
+                  value={activePet.hunger ?? 100}
+                  colorClass={
+                    (activePet.hunger ?? 100) > 50
+                      ? 'bg-green-500'
+                      : (activePet.hunger ?? 100) > 20
+                      ? 'bg-yellow-400'
+                      : 'bg-red-500'
+                  }
+                />
+                <StatBar
+                  label="Limpeza"
+                  icon="🛁"
+                  value={100 - (activePet.dirty ?? 0)}
+                  colorClass={
+                    (activePet.dirty ?? 0) < 40
+                      ? 'bg-blue-400'
+                      : (activePet.dirty ?? 0) < 70
+                      ? 'bg-yellow-400'
+                      : 'bg-orange-500'
+                  }
+                />
+              </div>
+              {(activePet.hunger ?? 100) < 20 && (
+                <p className="text-red-400 text-xs text-center animate-pulse">😰 {activePet.name} está com muita fome! Jogue Alimentar.</p>
+              )}
+              {(activePet.dirty ?? 0) > 80 && (
+                <p className="text-orange-400 text-xs text-center animate-pulse">🤢 {activePet.name} está muito sujo! Jogue Banho.</p>
+              )}
+            </div>
           </div>
         ) : (
           <div className="text-center py-8">
@@ -285,6 +419,66 @@ export default function PetHub({ initialUser, vipTier = 0 }: { initialUser: Disc
           </div>
         </Link>
       </div>
+
+      {/* Notificações locais */}
+      {(data.notifications?.length ?? 0) > 0 && (
+        <div className="bg-zinc-800/60 border border-zinc-700 rounded-2xl overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-700/60">
+            <div className="flex items-center gap-2">
+              <span>🔔</span>
+              <p className="text-white font-bold text-sm">Notificações</p>
+              {data.notifications.some(n => !n.read) && (
+                <span className="bg-red-500 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none">
+                  {data.notifications.filter(n => !n.read).length}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              {data.notifications.some(n => !n.read) && (
+                <button
+                  onClick={() => applyAndSave(markAllRead(data))}
+                  className="text-zinc-500 hover:text-zinc-300 text-xs transition-colors"
+                >
+                  Marcar lidas
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  let d = data
+                  data.notifications.forEach(n => { d = dismissNotification(d, n.id) })
+                  applyAndSave(d)
+                }}
+                className="text-zinc-600 hover:text-zinc-300 text-xs transition-colors"
+              >
+                Limpar
+              </button>
+            </div>
+          </div>
+          <ul className="divide-y divide-zinc-800/60">
+            {data.notifications.slice(0, 5).map(n => (
+              <li key={n.id} className={`flex items-start gap-3 px-4 py-3 transition-colors ${n.read ? 'opacity-60' : 'bg-yellow-400/5'}`}>
+                <span className="text-xl shrink-0 mt-0.5">{NOTIF_ICON[n.type] ?? '📢'}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-sm leading-snug">{n.message}</p>
+                  <p className="text-zinc-500 text-xs mt-0.5">{timeAgo(n.timestamp)}</p>
+                </div>
+                <button
+                  onClick={() => applyAndSave(dismissNotification(data, n.id))}
+                  className="text-zinc-600 hover:text-zinc-300 text-sm shrink-0 mt-0.5 transition-colors"
+                  title="Dispensar"
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+          {data.notifications.length > 5 && (
+            <div className="px-4 py-2 text-center border-t border-zinc-800/60">
+              <p className="text-zinc-500 text-xs">+{data.notifications.length - 5} notificações mais antigas</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

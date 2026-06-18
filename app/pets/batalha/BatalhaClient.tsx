@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import PetAnimator, { type AnimType } from '@/components/pets/PetAnimator'
 import {
   loadData, saveData, applyBattleLoss, checkRecovery, recoverySecondsLeft,
-  addPoints, formatTimeLeft, type PetPlayerData, type PetInstance,
+  addPoints, addNotification, formatTimeLeft, type PetPlayerData, type PetInstance,
 } from '@/lib/petStore'
 import { getPet, ELEMENT_EMOJI, ELEMENT_COLOR } from '@/lib/petData'
 import {
@@ -240,9 +240,29 @@ export default function BatalhaClient({ initialUser }: { initialUser: DiscordUse
 
     let updated = data
     if (winner === 'enemy') {
+      // Você perdeu — perde uma vida mas sem notificação de sofrimento
       updated = applyBattleLoss(data, activePet.instanceId)
+      // Pet do oponente venceu — notifica o dono (server-push)
+      if (selectedEntry) {
+        fetch('/api/pets/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            targetDiscordId: selectedEntry.discordId,
+            type: 'battle_defended',
+            message: `Seu bichinho ${selectedEntry.pet.name} defendeu um desafio de ${initialUser.username} e venceu!`,
+            points: reward,
+          }),
+        }).catch(() => {})
+      }
     } else {
+      // Você ganhou — ganha pontos + notificação local
       updated = addPoints(data, reward)
+      updated = addNotification(
+        updated,
+        'battle_win',
+        `${activePet.name} venceu a batalha contra ${selectedEntry?.pet.name ?? 'oponente'}! +${reward} pontos`,
+      )
     }
     saveData(updated)
     setData(checkRecovery(updated))

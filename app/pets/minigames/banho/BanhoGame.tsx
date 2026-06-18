@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import PetSprite from '@/components/pets/PetSprite'
-import { loadData, saveData, addPoints } from '@/lib/petStore'
+import { loadData, saveData, addPoints, cleanActivePet } from '@/lib/petStore'
 import GameTutorial, { TutorialButton } from '@/components/pets/GameTutorial'
 
 interface DiscordUser { id: string; username: string; avatar: string | null; globalName: string | null }
@@ -55,8 +55,11 @@ export default function BanhoGame({ initialUser }: { initialUser: DiscordUser | 
     const pts = scoreRef.current * 3
     setEarned(pts)
     if (initialUser) {
-      const d = loadData(initialUser.id)
-      saveData(addPoints(d, pts))
+      let d = loadData(initialUser.id)
+      d = addPoints(d, pts)
+      // Cada mancha limpa remove 12 pontos de sujeira do bichinho
+      d = cleanActivePet(d, scoreRef.current * 12)
+      saveData(d)
     }
   }
 

@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import NotificationBell from '@/components/pets/NotificationBell'
 
 const TABS = [
   { href: '/pets',              label: '🏠', title: 'Início',   exact: true },
@@ -29,7 +30,7 @@ export default function PetNav() {
 
       <span className="text-yellow-400 font-bold text-sm hidden sm:block shrink-0">🐾</span>
 
-      <div className="flex gap-1 overflow-x-auto scrollbar-none">
+      <div className="flex gap-1 overflow-x-auto scrollbar-none flex-1">
         {TABS.map(tab => {
           const active = tab.exact ? pathname === tab.href : pathname.startsWith(tab.href)
           return (
@@ -49,6 +50,8 @@ export default function PetNav() {
           )
         })}
       </div>
+
+      <NotificationBell />
     </nav>
   )
 }

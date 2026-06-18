@@ -18,6 +18,10 @@ export interface IncubatingEgg {
   endsAt: number
 }
 
+// Tamagotchi decay rates (per millisecond)
+export const HUNGER_RATE_PER_MS = 1 / (5 * 60 * 1000)  // perde 1 de fome a cada 5 min
+export const DIRTY_RATE_PER_MS  = 1 / (7 * 60 * 1000)  // fica 1 mais sujo a cada 7 min
+
 export interface PetInstance {
   instanceId: string
   petId: number
@@ -29,6 +33,18 @@ export interface PetInstance {
   lives: number           // 0-3
   recovering: boolean
   recoveryEndsAt?: number // timestamp
+  // Tamagotchi stats (active pet only)
+  hunger: number          // 0-100, 100 = cheio
+  dirty: number           // 0-100, 0 = limpo
+  lastStatUpdate?: number // timestamp do último cálculo
+}
+
+export interface PetNotification {
+  id: string
+  type: 'egg_ready' | 'battle_win' | 'battle_defended'
+  message: string
+  timestamp: number
+  read: boolean
 }
 
 export interface PetPlayerData {
@@ -42,6 +58,7 @@ export interface PetPlayerData {
   points: number
   totalPoints: number
   highScore: number
+  notifications: PetNotification[]
 }
 
 const KEY = (id: string) => `pet_data_${id}`
@@ -52,12 +69,17 @@ export function loadData(discordId: string): PetPlayerData {
     const raw = localStorage.getItem(KEY(discordId))
     if (raw) {
       const parsed = JSON.parse(raw)
-      // Migração: pets sem element ganham elemento aleatório
+      // Migração: pets sem element ganham elemento aleatório + defaults de tamagotchi
       if (parsed.ownedPets) {
-        parsed.ownedPets = parsed.ownedPets.map((p: PetInstance) =>
-          p.element ? p : { ...p, element: randomElement() }
-        )
+        parsed.ownedPets = parsed.ownedPets.map((p: PetInstance) => ({
+          ...p,
+          element: p.element ?? randomElement(),
+          hunger: p.hunger ?? 80,
+          dirty: p.dirty ?? 10,
+        }))
       }
+      // Migração: garantir campo notifications
+      if (!parsed.notifications) parsed.notifications = []
       return { ...empty(discordId), ...parsed }
     }
   } catch {}
@@ -101,6 +123,7 @@ function empty(discordId: string): PetPlayerData {
     points: 0,
     totalPoints: 0,
     highScore: 0,
+    notifications: [],
   }
 }
 
@@ -177,6 +200,9 @@ export function addPet(data: PetPlayerData, petId: number, element: Element, nam
     xp: 0,
     lives: 3,
     recovering: false,
+    hunger: 100,
+    dirty: 0,
+    lastStatUpdate: Date.now(),
   }
   return { ...data, ownedPets: [...data.ownedPets, pet] }
 }
@@ -279,4 +305,76 @@ function computeLevel(xp: number): number {
   let level = 1
   while (xpForLevel(level + 1) <= xp) level++
   return level
+}
+
+// ── Tamagotchi: fome e sujeira ─────────────────────────────────────────────────
+
+/** Aplica decaimento de fome/sujeira ao bichinho ativo com base no tempo passado */
+export function updateActivePetStats(data: PetPlayerData): PetPlayerData {
+  if (!data.activePetId) return data
+  const now = Date.now()
+  const pets = data.ownedPets.map(p => {
+    if (p.instanceId !== data.activePetId) return p
+    const last = p.lastStatUpdate ?? now
+    const elapsed = Math.max(0, now - last)
+    const hungerLost = elapsed * HUNGER_RATE_PER_MS
+    const dirtyGained = elapsed * DIRTY_RATE_PER_MS
+    return {
+      ...p,
+      hunger: Math.max(0, (p.hunger ?? 100) - hungerLost),
+      dirty: Math.min(100, (p.dirty ?? 0) + dirtyGained),
+      lastStatUpdate: now,
+    }
+  })
+  return { ...data, ownedPets: pets }
+}
+
+/** Alimenta o bichinho ativo (aumenta fome) */
+export function feedActivePet(data: PetPlayerData, amount: number): PetPlayerData {
+  if (!data.activePetId) return data
+  const pets = data.ownedPets.map(p => {
+    if (p.instanceId !== data.activePetId) return p
+    return { ...p, hunger: Math.min(100, (p.hunger ?? 0) + amount), lastStatUpdate: Date.now() }
+  })
+  return { ...data, ownedPets: pets }
+}
+
+/** Limpa o bichinho ativo (reduz sujeira) */
+export function cleanActivePet(data: PetPlayerData, amount: number): PetPlayerData {
+  if (!data.activePetId) return data
+  const pets = data.ownedPets.map(p => {
+    if (p.instanceId !== data.activePetId) return p
+    return { ...p, dirty: Math.max(0, (p.dirty ?? 100) - amount), lastStatUpdate: Date.now() }
+  })
+  return { ...data, ownedPets: pets }
+}
+
+// ── Notificações ──────────────────────────────────────────────────────────────
+
+export function addNotification(
+  data: PetPlayerData,
+  type: PetNotification['type'],
+  message: string,
+): PetPlayerData {
+  const notif: PetNotification = {
+    id: crypto.randomUUID(),
+    type,
+    message,
+    timestamp: Date.now(),
+    read: false,
+  }
+  // Mantém no máximo 50 notificações
+  return { ...data, notifications: [notif, ...(data.notifications ?? [])].slice(0, 50) }
+}
+
+export function markAllRead(data: PetPlayerData): PetPlayerData {
+  return { ...data, notifications: (data.notifications ?? []).map(n => ({ ...n, read: true })) }
+}
+
+export function dismissNotification(data: PetPlayerData, id: string): PetPlayerData {
+  return { ...data, notifications: (data.notifications ?? []).filter(n => n.id !== id) }
+}
+
+export function unreadCount(data: PetPlayerData): number {
+  return (data.notifications ?? []).filter(n => !n.read).length
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { loadData, saveData, addPoints } from '@/lib/petStore'
+import { loadData, saveData, addPoints, feedActivePet } from '@/lib/petStore'
 import GameTutorial, { TutorialButton } from '@/components/pets/GameTutorial'
 
 interface DiscordUser { id: string; username: string; avatar: string | null; globalName: string | null }
@@ -62,8 +62,11 @@ export default function AlimentarGame({ initialUser }: { initialUser: DiscordUse
     setEarned(pts)
     setDisplayState('over')
     if (initialUser) {
-      const d = loadData(initialUser.id)
-      saveData(addPoints(d, pts))
+      let d = loadData(initialUser.id)
+      d = addPoints(d, pts)
+      // Cada comida capturada alimenta o bichinho em 8 pontos de saciedade
+      d = feedActivePet(d, scoreRef.current * 8)
+      saveData(d)
     }
   }
 
