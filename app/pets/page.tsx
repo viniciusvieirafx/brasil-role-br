@@ -5,6 +5,7 @@ export default async function PetsPage() {
   const cookieStore = await cookies()
   const raw = cookieStore.get('discord_user')?.value
   const user = raw ? JSON.parse(raw) : null
+  const vipTier: number = user?.vipTier ?? 0
 
-  return <PetHub initialUser={user} />
+  return <PetHub initialUser={user} vipTier={vipTier} />
 }

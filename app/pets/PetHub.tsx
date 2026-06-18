@@ -14,6 +14,48 @@ import { playClick, playSuccess } from '@/lib/sounds'
 
 interface DiscordUser { id: string; username: string; avatar: string | null; globalName: string | null }
 
+const VIP_INFO: Record<number, { label: string; icon: string; color: string; border: string; bonuses: string[] }> = {
+  1: {
+    label: 'Bronze', icon: '🥉', color: 'text-amber-600', border: 'border-amber-600/60',
+    bonuses: ['3× entradas nos sorteios', 'Acesso ao sistema de bichinhos', 'Cargo exclusivo no Discord'],
+  },
+  2: {
+    label: 'Prata', icon: '🥈', color: 'text-slate-300', border: 'border-slate-300/60',
+    bonuses: ['5× entradas nos sorteios', 'Melhores odds na cápsula', 'Cargo exclusivo no Discord', 'Acesso a sorteios especiais'],
+  },
+  3: {
+    label: 'Ouro', icon: '🥇', color: 'text-yellow-400', border: 'border-yellow-400/60',
+    bonuses: ['10× entradas nos sorteios', 'Odds máximas na cápsula', 'Cargo exclusivo no Discord', 'Prioridade em todos os eventos', 'Bônus exclusivos futuros'],
+  },
+}
+
+function VipBadge({ tier }: { tier: number }) {
+  const info = VIP_INFO[tier]
+  if (!info) return null
+  return (
+    <div className="relative group">
+      <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border ${info.border} bg-black/30 cursor-default select-none`}>
+        <span className="text-base leading-none">{info.icon}</span>
+        <span className={`text-xs font-bold ${info.color}`}>VIP {info.label}</span>
+      </div>
+      {/* Tooltip */}
+      <div className="absolute right-0 top-full mt-2 z-50 w-56 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200">
+        <div className="bg-[#130F2A] border border-zinc-700 rounded-xl p-3 shadow-xl shadow-black/50">
+          <p className={`text-xs font-bold mb-2 ${info.color}`}>{info.icon} Bônus VIP {info.label}</p>
+          <ul className="space-y-1">
+            {info.bonuses.map((b, i) => (
+              <li key={i} className="flex items-start gap-1.5 text-xs text-zinc-300">
+                <span className="text-green-400 mt-0.5">✓</span>
+                {b}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Bichinho animado (cicla idle → walk → idle) ────────────────────────────────
 function LivePet({ petId }: { petId: number }) {
   const [anim, setAnim] = useState<AnimType>('idle')
@@ -51,7 +93,7 @@ function LivePet({ petId }: { petId: number }) {
 }
 
 // ── Hub principal ─────────────────────────────────────────────────────────────
-export default function PetHub({ initialUser }: { initialUser: DiscordUser | null }) {
+export default function PetHub({ initialUser, vipTier = 0 }: { initialUser: DiscordUser | null; vipTier?: number }) {
   const router = useRouter()
   const [data, setData] = useState<PetPlayerData | null>(null)
   const [activePet, setActivePetObj] = useState<PetInstance | null>(null)
@@ -144,9 +186,12 @@ export default function PetHub({ initialUser }: { initialUser: DiscordUser | nul
           <p className="text-zinc-500 text-xs">Bem-vindo,</p>
           <p className="text-white font-bold text-sm">{initialUser.globalName ?? initialUser.username}</p>
         </div>
-        <div className="ml-auto flex items-center gap-2 bg-yellow-400/10 border border-yellow-400/30 rounded-xl px-3 py-1.5">
-          <span className="text-yellow-400 font-bold">{data.points}</span>
-          <span className="text-zinc-400 text-xs">pts</span>
+        <div className="ml-auto flex items-center gap-2">
+          {vipTier > 0 && <VipBadge tier={vipTier} />}
+          <div className="flex items-center gap-2 bg-yellow-400/10 border border-yellow-400/30 rounded-xl px-3 py-1.5">
+            <span className="text-yellow-400 font-bold">{data.points}</span>
+            <span className="text-zinc-400 text-xs">pts</span>
+          </div>
         </div>
       </div>
 
