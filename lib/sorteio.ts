@@ -24,6 +24,9 @@ export async function fetchNome(userId: string): Promise<string> {
   return userId
 }
 
+// Multiplicadores por tier VIP (tier 0 = sem VIP)
+const VIP_TIER_MULTIPLIER: Record<number, number> = { 1: 3, 2: 5, 3: 10 }
+
 export async function executarSorteio(sorteio: {
   participantes: string[]
   numVencedores?: number
@@ -40,7 +43,11 @@ export async function executarSorteio(sorteio: {
       const vipRaw = await kvGet(`vip:${id}`)
       if (vipRaw) {
         const v = JSON.parse(vipRaw)
-        if (v.expiresAt >= today) entries = sorteio.vipMultiplier ?? 3
+        if (v.expiresAt >= today) {
+          // Usa multiplicador por tier; fallback para vipMultiplier (legado) ou 3
+          const tier: number = v.tier ?? 1
+          entries = VIP_TIER_MULTIPLIER[tier] ?? sorteio.vipMultiplier ?? 3
+        }
       }
     }
     for (let i = 0; i < entries; i++) pool.push(id)

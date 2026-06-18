@@ -62,7 +62,7 @@ const ODDS_BY_TIER: Record<number, { label: string; pct: string; color: string }
     { label:'🥚 Ovo Comum',      pct:'15%',  color:'text-zinc-400' },
     { label:'🟢 Ovo Incomum',    pct:'17%',  color:'text-green-400' },
     { label:'🔵 Ovo Raro',       pct:'11%',  color:'text-blue-400'  },
-    { label:'🟣 Ovo Épico',      pct:'6.5%', color:'text-purple-400'},
+    { label:'🟣 Ovo Épico',      pct:'5.5%', color:'text-purple-400'},
     { label:'🌟 Ovo Lendário',   pct:'1.5%', color:'text-yellow-400'},
   ],
 }
