@@ -80,8 +80,8 @@ export function randomElement(): Element {
   return ELEMENTS[Math.floor(Math.random() * ELEMENTS.length)]
 }
 
-// Tempo de incubação do PRIMEIRO ovo (5 minutos)
-export const FIRST_EGG_SECONDS = 300
+// Tempo de incubação do PRIMEIRO ovo (1 minuto)
+export const FIRST_EGG_SECONDS = 60
 
 export const EGG_DB: EggDefinition[] = [
   { type:'Comum',    color:'#6b7280', borderColor:'#9ca3af', possiblePets: range(1,50),   incubationSeconds: 3600,   label:'Ovo Comum',    xpOnDuplicate: 50   },

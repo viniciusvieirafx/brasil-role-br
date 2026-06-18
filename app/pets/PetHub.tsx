@@ -118,12 +118,12 @@ export default function PetHub({ initialUser }: { initialUser: DiscordUser | nul
           <div className="absolute -top-2 -right-2 text-3xl animate-spin" style={{ animationDuration:'3s' }}>✨</div>
         </div>
         <h1 className="text-4xl font-bold text-white">Olá, <span className="text-yellow-400">{initialUser.globalName ?? initialUser.username}</span>!</h1>
-        <p className="text-zinc-400 max-w-md text-lg">Comece sua jornada e ganhe seu primeiro ovo gratuito! Ele choca em 5 minutos.</p>
+        <p className="text-zinc-400 max-w-md text-lg">Comece sua jornada e ganhe seu primeiro ovo gratuito! Ele choca em 1 minuto.</p>
         <button onClick={handleStart}
           className="px-8 py-4 bg-yellow-400 hover:bg-yellow-300 text-black rounded-2xl font-bold text-xl transition-all hover:scale-105 shadow-lg shadow-yellow-400/30">
           🐣 Iniciar meu Bichinho!
         </button>
-        <p className="text-zinc-600 text-sm">Ovo Comum gratuito · Choca em 5 minutos</p>
+        <p className="text-zinc-600 text-sm">Ovo Comum gratuito · Choca em 1 minuto</p>
       </div>
     )
   }
