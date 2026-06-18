@@ -7,25 +7,25 @@ import GameTutorial, { TutorialButton } from '@/components/pets/GameTutorial'
 interface DiscordUser { id: string; username: string; avatar: string | null; globalName: string | null }
 
 // ── Canvas dimensions ──────────────────────────────────────────────────────────
-const W = 360
-const H = 220
-const GROUND_Y = H - 40       // y do chão (topo)
-const PLAYER_X = 60
-const PLAYER_W = 48
-const PLAYER_H = 48
+const W = 600
+const H = 240
+const GROUND_Y = H - 44       // y do chão (topo)
+const PLAYER_X = 70
+const PLAYER_W = 52
+const PLAYER_H = 52
 
 // ── Physics ────────────────────────────────────────────────────────────────────
-const GRAVITY = 0.55
-const JUMP_FORCE = -12.5
-const DOUBLE_JUMP_FORCE = -11
+const GRAVITY = 0.5
+const JUMP_FORCE = -12
+const DOUBLE_JUMP_FORCE = -10.5
 
 // ── Obstacle config ────────────────────────────────────────────────────────────
-const OBS_MIN_W = 20
-const OBS_MAX_W = 36
-const OBS_MIN_H = 28
-const OBS_MAX_H = 56
-const OBS_MIN_GAP = 260    // min px between obstacles
-const OBS_MAX_GAP = 520
+const OBS_MIN_W = 22
+const OBS_MAX_W = 38
+const OBS_MIN_H = 30
+const OBS_MAX_H = 58
+const OBS_MIN_GAP = 420    // min px between obstacles
+const OBS_MAX_GAP = 780
 
 type DisplayState = 'idle' | 'playing' | 'over' | 'tutorial'
 
@@ -53,7 +53,7 @@ function makeState(): GameState {
     jumpsLeft: 2,
     obstacles: [],
     score: 0,
-    speed: 5,
+    speed: 3.5,
     nextObstacleIn: 80,
     alive: true,
     walkFrame: 0,
@@ -199,7 +199,7 @@ export default function PuloGame({ initialUser }: { initialUser: DiscordUser | n
 
     // ── Speed ramp ───────────────────────────────────────────────────────────
     gs.score++
-    gs.speed = 5 + Math.min(8, gs.score / 400)
+    gs.speed = 3.5 + Math.min(6, gs.score / 700)
 
     // ── Spawn obstacle ───────────────────────────────────────────────────────
     gs.nextObstacleIn--
