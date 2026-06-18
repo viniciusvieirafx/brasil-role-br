@@ -1,7 +1,7 @@
 export type Lang = 'pt' | 'en' | 'es'
 
 export type Translations = {
-  nav: { home: string; about: string; team: string; vip: string; contact: string; updates: string; verify: string; raffle: string }
+  nav: { home: string; about: string; team: string; vip: string; contact: string; updates: string; verify: string; raffle: string; pets: string }
   updates: { titleA: string; titleB: string; subtitle: string; latest: string; filterAll: string; empty: string }
   hero: { badge: string; desc: string; btnVip: string; scroll: string }
   gallery: { titleA: string; titleB: string; subtitle: string; btnVisit: string }
@@ -62,6 +62,7 @@ export const translations: Record<Lang, Translations> = {
       verify: 'Verificar',
       vip: 'VIP',
       raffle: 'Sorteio',
+      pets: 'Bichinhos',
       contact: 'Contato',
     },
     updates: {
@@ -220,6 +221,7 @@ export const translations: Record<Lang, Translations> = {
       verify: 'Verify',
       vip: 'VIP',
       raffle: 'Raffle',
+      pets: 'Pets',
       contact: 'Contact',
     },
     updates: {
@@ -378,6 +380,7 @@ export const translations: Record<Lang, Translations> = {
       verify: 'Verificar',
       vip: 'VIP',
       raffle: 'Sorteo',
+      pets: 'Mascotas',
       contact: 'Contacto',
     },
     updates: {

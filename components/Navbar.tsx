@@ -21,14 +21,15 @@ export default function Navbar({ latestVersion }: NavbarProps) {
   const discordInvite = process.env.NEXT_PUBLIC_DISCORD_INVITE ?? '#'
 
   const links = [
-    { href: '#inicio', label: t.nav.home, badge: false },
-    { href: '#sobre', label: t.nav.about, badge: false },
-    { href: '#equipe', label: t.nav.team, badge: false },
-    { href: '#atualizacoes', label: t.nav.updates, badge: hasNew },
-    { href: '#verificar', label: t.nav.verify, badge: false },
-    { href: '#vip', label: t.nav.vip, badge: false },
-    { href: '#sorteio', label: t.nav.raffle, badge: false },
-    { href: '#contato', label: t.nav.contact, badge: false },
+    { href: '#inicio',   label: t.nav.home,    badge: false, external: false },
+    { href: '#sobre',    label: t.nav.about,   badge: false, external: false },
+    { href: '#equipe',   label: t.nav.team,    badge: false, external: false },
+    { href: '#atualizacoes', label: t.nav.updates, badge: hasNew, external: false },
+    { href: '#verificar',label: t.nav.verify,  badge: false, external: false },
+    { href: '#vip',      label: t.nav.vip,     badge: false, external: false },
+    { href: '#sorteio',  label: t.nav.raffle,  badge: false, external: false },
+    { href: '/pets',     label: t.nav.pets,    badge: false, external: false },
+    { href: '#contato',  label: t.nav.contact, badge: false, external: false },
   ]
 
   useEffect(() => {
@@ -79,9 +80,13 @@ export default function Navbar({ latestVersion }: NavbarProps) {
               key={l.href}
               href={l.href}
               onClick={l.badge ? markSeen : undefined}
-              className="relative text-gray-400 hover:text-br-yellow transition-colors text-sm font-medium group"
+              className={`relative transition-colors text-sm font-medium group ${
+                l.href === '/pets'
+                  ? 'text-yellow-400 hover:text-yellow-300'
+                  : 'text-gray-400 hover:text-br-yellow'
+              }`}
             >
-              {l.label}
+              {l.href === '/pets' ? `🐾 ${l.label}` : l.label}
               {l.badge && (
                 <span className="absolute -top-1 -right-2.5 w-2 h-2 bg-red-500 rounded-full">
                   <span className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-75" />
@@ -137,10 +142,12 @@ export default function Navbar({ latestVersion }: NavbarProps) {
             <a
               key={l.href}
               href={l.href}
-              className="flex items-center gap-2 text-gray-300 hover:text-br-yellow py-2 transition-colors"
+              className={`flex items-center gap-2 py-2 transition-colors ${
+                l.href === '/pets' ? 'text-yellow-400 hover:text-yellow-300' : 'text-gray-300 hover:text-br-yellow'
+              }`}
               onClick={() => { setOpen(false); if (l.badge) markSeen() }}
             >
-              {l.label}
+              {l.href === '/pets' ? `🐾 ${l.label}` : l.label}
               {l.badge && (
                 <span className="w-2 h-2 bg-red-500 rounded-full shrink-0" />
               )}
