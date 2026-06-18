@@ -48,7 +48,7 @@ const TIERS: TierInfo[] = [
       '👑 Cargos especiais no Discord',
       '💬 Canal VIP exclusivo no Discord',
       '🎰 3x bônus nos sorteios',
-      '🎁 Desconto na cápsula de pets (400 pts)',
+      '🎁 Cápsula de pets por 400 pts (economize 100)',
     ],
   },
   {
@@ -64,7 +64,7 @@ const TIERS: TierInfo[] = [
     benefits: [
       '🥉 Todos os benefícios do Bronze',
       '🥚 Melhores chances na cápsula de pets',
-      '💰 Desconto maior na cápsula (350 pts)',
+      '💰 Cápsula de pets por 350 pts (economize 150)',
       '🎰 5x bônus nos sorteios',
       '⭐ Badge exclusivo Prata no Discord',
     ],
@@ -82,7 +82,7 @@ const TIERS: TierInfo[] = [
     benefits: [
       '🥈 Todos os benefícios do Prata',
       '🌟 Odds máximas na cápsula (épico + lendário)',
-      '💰 Desconto máximo na cápsula (300 pts)',
+      '💰 Cápsula de pets por 300 pts (economize 200)',
       '🎰 10x bônus nos sorteios',
       '🌟 Badge exclusivo Ouro no Discord',
     ],
