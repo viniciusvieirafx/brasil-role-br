@@ -110,6 +110,57 @@ html {
   left: 130%;
 }
 
+/* ─── Moeda VIP — animações por tier ─── */
+
+@keyframes coin-spin-slow {
+  0%   { transform: rotateY(0deg) scale(1); }
+  50%  { transform: rotateY(180deg) scale(1.04); }
+  100% { transform: rotateY(360deg) scale(1); }
+}
+
+@keyframes coin-spin-med {
+  0%   { transform: rotateY(0deg) scale(1); }
+  50%  { transform: rotateY(180deg) scale(1.07); }
+  100% { transform: rotateY(360deg) scale(1); }
+}
+
+@keyframes coin-spin-fast {
+  0%   { transform: rotateY(0deg) scale(1); }
+  50%  { transform: rotateY(180deg) scale(1.12); }
+  100% { transform: rotateY(360deg) scale(1); }
+}
+
+@keyframes pulse-glow-silver {
+  0%, 100% { box-shadow: 0 0 12px 2px rgba(192,192,192,0.35), 0 0 30px 4px rgba(192,192,192,0.12); }
+  50%       { box-shadow: 0 0 22px 6px rgba(192,192,192,0.60), 0 0 55px 10px rgba(192,192,192,0.22); }
+}
+
+@keyframes pulse-glow-gold {
+  0%, 100% { box-shadow: 0 0 18px 4px rgba(255,215,0,0.55), 0 0 50px 10px rgba(255,180,0,0.25); }
+  50%       { box-shadow: 0 0 35px 10px rgba(255,215,0,0.85), 0 0 90px 20px rgba(255,180,0,0.45); }
+}
+
+/* VIP1 — Bronze: gira lento, filtro cobre, sem glow */
+.coin-vip1 {
+  animation: coin-spin-slow 5s ease-in-out infinite;
+  filter: sepia(0.7) saturate(1.4) hue-rotate(355deg) brightness(0.88) contrast(1.1);
+  border-radius: 50%;
+}
+
+/* VIP2 — Prata: gira médio, cor original (prata), glow prateado */
+.coin-vip2 {
+  animation: coin-spin-med 3.5s ease-in-out infinite, pulse-glow-silver 2.5s ease-in-out infinite;
+  filter: brightness(1.1) contrast(1.05) saturate(0.85);
+  border-radius: 50%;
+}
+
+/* VIP3 — Ouro: gira rápido, filtro dourado, glow intenso */
+.coin-vip3 {
+  animation: coin-spin-fast 2.2s ease-in-out infinite, pulse-glow-gold 1.8s ease-in-out infinite;
+  filter: sepia(1) saturate(3.5) hue-rotate(5deg) brightness(1.25) contrast(1.1);
+  border-radius: 50%;
+}
+
 /* ─── Scrollbar ─── */
 ::-webkit-scrollbar {
   width: 6px;

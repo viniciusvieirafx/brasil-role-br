@@ -25,6 +25,12 @@ interface TierInfo {
   highlight?: string
 }
 
+const COIN_CLASS: Record<1 | 2 | 3, string> = {
+  1: 'coin-vip1',
+  2: 'coin-vip2',
+  3: 'coin-vip3',
+}
+
 const TIERS: TierInfo[] = [
   {
     tier: 1,
@@ -176,7 +182,16 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
                 </div>
               )}
               <div className="text-center mb-4">
-                <div className="text-4xl mb-1">{tier.emoji}</div>
+                <div className="flex justify-center mb-2" style={{ perspective: '300px' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/MoedaVip.png"
+                    alt={tier.name}
+                    width={72}
+                    height={72}
+                    className={COIN_CLASS[tier.tier]}
+                  />
+                </div>
                 <h3 className={`text-lg font-bold ${tier.color}`}>{tier.name}</h3>
                 <div className="text-3xl font-extrabold text-white mt-1">
                   R$ {tier.price}
@@ -296,7 +311,10 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
                 </>
               ) : (
                 <>
-                  <div className={`text-3xl`}>{selectedTier.emoji}</div>
+                  <div className="flex justify-center" style={{ perspective: '300px' }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/MoedaVip.png" alt={selectedTier.name} width={56} height={56} className={COIN_CLASS[selectedTier.tier]} />
+              </div>
                   <div>
                     <p className={`font-bold text-lg ${selectedTier.color}`}>{selectedTier.name}</p>
                     <p className="text-gray-400 text-sm">R$ {selectedTier.price},00/mês • renovação manual</p>
