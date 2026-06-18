@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import PetSprite from '@/components/pets/PetSprite'
 import {
-  loadData, saveData, startIncubation, checkHatch, addPet,
+  loadData, saveData, startIncubation, checkHatch, addPet, setActivePet,
   incubationProgress, incubationSecondsLeft,
   type PetPlayerData,
 } from '@/lib/petStore'
@@ -23,6 +24,7 @@ type ModalState =
   | null
 
 export default function OvosClient({ initialUser }: { initialUser: DiscordUser | null }) {
+  const router = useRouter()
   const [data, setData] = useState<PetPlayerData | null>(null)
   const [progress, setProgress] = useState(0)
   const [secsLeft, setSecsLeft] = useState(0)
@@ -77,11 +79,16 @@ export default function OvosClient({ initialUser }: { initialUser: DiscordUser |
     if (!pendingHatch || !initialUser) return
     playClick()
     const name = hatchName.trim() || getPet(pendingHatch.petId).name
-    const updated = addPet(pendingHatch.data, pendingHatch.petId, pendingHatch.element, name)
+    const withPet = addPet(pendingHatch.data, pendingHatch.petId, pendingHatch.element, name)
+    // Ativa automaticamente se for o primeiro bichinho
+    const newInstance = withPet.ownedPets[withPet.ownedPets.length - 1]
+    const isFirst = pendingHatch.data.ownedPets.length === 0
+    const updated = isFirst ? setActivePet(withPet, newInstance.instanceId) : withPet
     saveData(updated)
     setData(updated)
     setPendingHatch(null)
     setModal(null)
+    if (isFirst) router.push('/pets')
   }
 
   function handleCloseDuplicate() {
