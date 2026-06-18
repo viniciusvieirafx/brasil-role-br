@@ -39,31 +39,37 @@ export default function OvosClient({ initialUser }: { initialUser: DiscordUser |
 
   useEffect(() => {
     if (!data?.incubating) return
+
+    function doHatch() {
+      const result = checkHatch(data!)
+      if (!result.hatchedPetId) return
+      saveData(result.data)
+      setData(result.data)
+      if (result.isDuplicate) {
+        playXpGain()
+        setModal({ kind: 'duplicate', petId: result.hatchedPetId, element: result.hatchedElement!, xp: result.xpGained })
+      } else {
+        playHatch()
+        const pet = getPet(result.hatchedPetId)
+        setHatchName(pet.name)
+        setPendingHatch({ data: result.data, petId: result.hatchedPetId, element: result.hatchedElement! })
+        setModal({ kind: 'hatch', petId: result.hatchedPetId, element: result.hatchedElement! })
+      }
+    }
+
+    // Verifica imediatamente — ovo pode ter ficado pronto enquanto o site estava fechado
+    const prog0 = incubationProgress(data.incubating)
+    setProgress(prog0)
+    setSecsLeft(incubationSecondsLeft(data.incubating))
+    if (prog0 >= 1) { doHatch(); return }
+
     const id = setInterval(() => {
       const prog = incubationProgress(data.incubating!)
       const secs = incubationSecondsLeft(data.incubating!)
       setProgress(prog)
       setSecsLeft(secs)
-
-      if (prog >= 1) {
-        clearInterval(id)
-        const result = checkHatch(data)
-        if (result.hatchedPetId) {
-          saveData(result.data)
-          setData(result.data)
-          if (result.isDuplicate) {
-            playXpGain()
-            setModal({ kind:'duplicate', petId:result.hatchedPetId, element:result.hatchedElement!, xp:result.xpGained })
-          } else {
-            playHatch()
-            const pet = getPet(result.hatchedPetId)
-            setHatchName(pet.name)
-            setPendingHatch({ data:result.data, petId:result.hatchedPetId, element:result.hatchedElement! })
-            setModal({ kind:'hatch', petId:result.hatchedPetId, element:result.hatchedElement! })
-          }
-        }
-      }
-    }, 500)
+      if (prog >= 1) { clearInterval(id); doHatch() }
+    }, 1000)
     return () => clearInterval(id)
   }, [data])
 

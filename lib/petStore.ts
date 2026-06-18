@@ -52,6 +52,11 @@ export interface PetNotification {
   read: boolean
 }
 
+export interface BattleLimitEntry {
+  count: number        // batalhas travadas nesta janela
+  windowStart: number  // timestamp do início da janela
+}
+
 export interface PetPlayerData {
   discordId: string
   hasStarted: boolean
@@ -64,6 +69,7 @@ export interface PetPlayerData {
   totalPoints: number
   highScore: number
   notifications: PetNotification[]
+  battleLimits: Record<string, BattleLimitEntry>  // chave = discordId do oponente
 }
 
 const KEY = (id: string) => `pet_data_${id}`
@@ -86,6 +92,8 @@ export function loadData(discordId: string): PetPlayerData {
       }
       // Migração: garantir campo notifications
       if (!parsed.notifications) parsed.notifications = []
+      // Migração: garantir campo battleLimits
+      if (!parsed.battleLimits) parsed.battleLimits = {}
       return { ...empty(discordId), ...parsed }
     }
   } catch {}
@@ -130,6 +138,7 @@ function empty(discordId: string): PetPlayerData {
     totalPoints: 0,
     highScore: 0,
     notifications: [],
+    battleLimits: {},
   }
 }
 
@@ -261,6 +270,9 @@ export function addXpBoostToActivePet(data: PetPlayerData, xp: number): PetPlaye
 
 export const MAX_LIVES = 3
 export const RECOVERY_MS = 24 * 60 * 60 * 1000  // 24h
+
+export const BATTLE_LIMIT    = 3
+export const BATTLE_COOLDOWN_MS = 60 * 60 * 1000  // 1h
 
 export function applyBattleLoss(data: PetPlayerData, instanceId: string): PetPlayerData {
   const pets = data.ownedPets.map(p => {
@@ -446,4 +458,42 @@ export function dismissNotification(data: PetPlayerData, id: string): PetPlayerD
 
 export function unreadCount(data: PetPlayerData): number {
   return (data.notifications ?? []).filter(n => !n.read).length
+}
+
+// ── Limite de batalhas por oponente ───────────────────────────────────────────
+
+/** Retorna o status do limite de batalhas contra um oponente específico */
+export function getBattleLimitStatus(data: PetPlayerData, opponentId: string): {
+  blocked: boolean
+  remaining: number
+  cooldownSecsLeft: number
+} {
+  const entry = (data.battleLimits ?? {})[opponentId]
+
+  if (!entry || Date.now() - entry.windowStart >= BATTLE_COOLDOWN_MS) {
+    return { blocked: false, remaining: BATTLE_LIMIT, cooldownSecsLeft: 0 }
+  }
+
+  const remaining = Math.max(0, BATTLE_LIMIT - entry.count)
+  const blocked = remaining === 0
+  const cooldownSecsLeft = blocked
+    ? Math.ceil((entry.windowStart + BATTLE_COOLDOWN_MS - Date.now()) / 1000)
+    : 0
+
+  return { blocked, remaining, cooldownSecsLeft }
+}
+
+/** Registra uma batalha travada contra um oponente (chama antes de iniciar a luta) */
+export function recordBattleAgainst(data: PetPlayerData, opponentId: string): PetPlayerData {
+  const limits = { ...(data.battleLimits ?? {}) }
+  const entry = limits[opponentId]
+  const now = Date.now()
+
+  if (!entry || now - entry.windowStart >= BATTLE_COOLDOWN_MS) {
+    limits[opponentId] = { count: 1, windowStart: now }
+  } else {
+    limits[opponentId] = { count: entry.count + 1, windowStart: entry.windowStart }
+  }
+
+  return { ...data, battleLimits: limits }
 }

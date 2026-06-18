@@ -225,20 +225,27 @@ export default function PetHub({ initialUser, vipTier = 0 }: { initialUser: Disc
   // Incubation countdown + notificação quando ovo fica pronto
   useEffect(() => {
     if (!data?.incubating) { setEggNotified(false); return }
+
+    function notifyReady() {
+      setEggNotified(true)
+      setData(prev => {
+        if (!prev) return prev
+        const updated = addNotification(prev, 'egg_ready', 'Seu ovo está pronto para eclodir! Vá até a página de ovos.')
+        saveData(updated)
+        return updated
+      })
+    }
+
+    // Verifica imediatamente — ovo pode ter ficado pronto enquanto o site estava fechado
+    const initialSecs = incubationSecondsLeft(data.incubating)
+    setSecsLeft(initialSecs)
+    if (initialSecs === 0 && !eggNotified) { notifyReady(); return }
+
     const id = setInterval(() => {
       const secs = incubationSecondsLeft(data.incubating!)
       setSecsLeft(secs)
-      if (secs === 0 && !eggNotified) {
-        setEggNotified(true)
-        setData(prev => {
-          if (!prev) return prev
-          const updated = addNotification(prev, 'egg_ready', 'Seu ovo está pronto para eclodir! Vá até a página de ovos.')
-          saveData(updated)
-          return updated
-        })
-      }
+      if (secs === 0 && !eggNotified) { notifyReady() }
     }, 1000)
-    setSecsLeft(incubationSecondsLeft(data.incubating))
     return () => clearInterval(id)
   }, [data?.incubating, eggNotified])
 
@@ -422,7 +429,9 @@ export default function PetHub({ initialUser, vipTier = 0 }: { initialUser: Disc
           <span className="text-3xl animate-pulse">🥚</span>
           <div className="flex-1">
             <p className="text-white text-sm font-medium">Incubando...</p>
-            <p className="text-zinc-400 text-xs">{formatTimeLeft(secsLeft)} restantes</p>
+            <p className="text-zinc-400 text-xs">
+            {secsLeft > 0 ? `${formatTimeLeft(secsLeft)} restantes` : <span className="text-green-400 font-medium animate-pulse">Pronto para eclodir!</span>}
+          </p>
           </div>
           <span className="text-yellow-400 text-sm">→</span>
         </Link>

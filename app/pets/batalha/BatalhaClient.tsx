@@ -4,7 +4,9 @@ import { useEffect, useState, useRef } from 'react'
 import PetAnimator, { type AnimType } from '@/components/pets/PetAnimator'
 import {
   loadData, saveData, applyBattleLoss, checkRecovery, recoverySecondsLeft,
-  addPoints, addNotification, formatTimeLeft, type PetPlayerData, type PetInstance,
+  addPoints, addNotification, formatTimeLeft,
+  getBattleLimitStatus, recordBattleAgainst,
+  type PetPlayerData, type PetInstance,
 } from '@/lib/petStore'
 import { getPet, ELEMENT_EMOJI, ELEMENT_COLOR } from '@/lib/petData'
 import {
@@ -213,6 +215,15 @@ export default function BatalhaClient({ initialUser }: { initialUser: DiscordUse
     if (!data || !initialUser) return
     const activePet = data.ownedPets.find(p => p.instanceId === data.activePetId)
     if (!activePet) return
+
+    // Checa limite de batalhas contra este oponente
+    const limit = getBattleLimitStatus(data, entry.discordId)
+    if (limit.blocked) return
+
+    // Registra a batalha e salva antes de iniciar
+    const updatedData = recordBattleAgainst(data, entry.discordId)
+    saveData(updatedData)
+    setData(updatedData)
 
     const p = makeBattlePet(activePet.instanceId, activePet.petId, activePet.name, activePet.level, activePet.element)
     const e = makeBattlePet(entry.pet.instanceId, entry.pet.petId, entry.pet.name, entry.pet.level, entry.pet.element as any)
@@ -437,11 +448,14 @@ export default function BatalhaClient({ initialUser }: { initialUser: DiscordUse
             adv === 'weak'   ? 'text-red-400'   : 'text-zinc-400'
 
           const displayName = entry.globalName ?? entry.username
+          const limit = getBattleLimitStatus(data, entry.discordId)
 
           return (
             <div
               key={entry.discordId}
-              className="flex items-center gap-3 bg-zinc-800/60 border border-zinc-700 hover:border-yellow-400/40 rounded-xl p-3 transition-all"
+              className={`flex items-center gap-3 bg-zinc-800/60 border rounded-xl p-3 transition-all ${
+                limit.blocked ? 'border-zinc-700 opacity-60' : 'border-zinc-700 hover:border-yellow-400/40'
+              }`}
             >
               {/* Avatar do jogador */}
               <div className="shrink-0 relative">
@@ -473,6 +487,16 @@ export default function BatalhaClient({ initialUser }: { initialUser: DiscordUse
                   </span>
                   <span className={`ml-2 text-xs ${advColor}`}>{advLabel}</span>
                 </p>
+                {/* Badge de limite */}
+                {limit.blocked ? (
+                  <p className="text-red-400 text-xs mt-0.5">
+                    ⏳ Cooldown: {formatTimeLeft(limit.cooldownSecsLeft)}
+                  </p>
+                ) : limit.remaining < 3 ? (
+                  <p className="text-yellow-500 text-xs mt-0.5">
+                    ⚔️ {limit.remaining}/3 lutas restantes
+                  </p>
+                ) : null}
               </div>
 
               <div className="text-right shrink-0">
@@ -481,9 +505,10 @@ export default function BatalhaClient({ initialUser }: { initialUser: DiscordUse
                 </p>
                 <button
                   onClick={() => handleStartBattle(entry)}
-                  className="px-3 py-1.5 bg-red-500 hover:bg-red-400 text-white text-xs font-bold rounded-lg transition-all hover:scale-105"
+                  disabled={limit.blocked}
+                  className="px-3 py-1.5 bg-red-500 hover:bg-red-400 disabled:bg-zinc-600 disabled:cursor-not-allowed text-white text-xs font-bold rounded-lg transition-all hover:scale-105 disabled:hover:scale-100"
                 >
-                  Lutar
+                  {limit.blocked ? 'Bloqueado' : 'Lutar'}
                 </button>
               </div>
             </div>

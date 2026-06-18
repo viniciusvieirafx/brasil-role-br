@@ -19,11 +19,11 @@ const GAMES = [
   },
   {
     href: '/pets/minigames/pulo',
-    icon: '🪂',
-    title: 'Pulo Infinito',
-    desc: 'Pule entre plataformas enquanto a tela sobe. A dificuldade aumenta até você cair!',
+    icon: '🦕',
+    title: 'Corrida Infinita',
+    desc: 'Corra o máximo possível sem bater nos obstáculos! O jogo acelera com o tempo.',
     color: 'border-green-500/50 hover:border-green-400 bg-green-900/10',
-    reward: 'recorde de altura',
+    reward: 'recorde de distância',
   },
 ]
 
