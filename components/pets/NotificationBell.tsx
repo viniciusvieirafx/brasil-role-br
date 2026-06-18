@@ -7,6 +7,7 @@ const TYPE_ICON: Record<string, string> = {
   battle_defended: '🛡️',
   egg_ready:       '🥚',
   battle_win:      '🏆',
+  level_up:        '⬆️',
 }
 
 function timeAgo(ts: number): string {

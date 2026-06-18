@@ -6,10 +6,10 @@ import { useRouter } from 'next/navigation'
 import PetAnimator, { type AnimType } from '@/components/pets/PetAnimator'
 import {
   loadData, saveData, giveFirstEgg, startIncubation, loadFromServer,
-  updateActivePetStats, addNotification, markAllRead, dismissNotification,
+  updateActivePetFull, addNotification, markAllRead, dismissNotification,
   type PetPlayerData, type PetInstance, type PetNotification,
 } from '@/lib/petStore'
-import { getPet, RARITY_STYLE, ELEMENT_EMOJI, ELEMENT_COLOR, CAPSULE_COST } from '@/lib/petData'
+import { getPet, RARITY_STYLE, ELEMENT_EMOJI, ELEMENT_COLOR, CAPSULE_COST, xpForLevel } from '@/lib/petData'
 import { formatTimeLeft, incubationSecondsLeft } from '@/lib/petStore'
 import { playClick, playSuccess } from '@/lib/sounds'
 import type { ServerNotification } from '@/app/api/pets/notifications/route'
@@ -84,11 +84,35 @@ function petMood(hunger: number, dirty: number): string {
   return '😵'
 }
 
+// ── Barra de XP ───────────────────────────────────────────────────────────────
+function XpBar({ xp, level }: { xp: number; level: number }) {
+  const xpStart  = xpForLevel(level)
+  const xpEnd    = xpForLevel(level + 1)
+  const xpInLvl  = Math.floor(xp - xpStart)
+  const xpNeeded = xpEnd - xpStart
+  const pct      = Math.min(100, Math.round((xpInLvl / xpNeeded) * 100))
+  return (
+    <div className="mt-1.5 mb-2">
+      <div className="flex items-center justify-between text-xs mb-0.5">
+        <span className="text-indigo-400 font-semibold">✦ XP · Nv {level}</span>
+        <span className="text-zinc-500">{xpInLvl} / {xpNeeded}</span>
+      </div>
+      <div className="h-2 bg-zinc-700/60 rounded-full overflow-hidden">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-violet-500 to-indigo-400 transition-all duration-700"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  )
+}
+
 // ── Notificações locais ────────────────────────────────────────────────────────
 const NOTIF_ICON: Record<string, string> = {
   egg_ready:       '🥚',
   battle_win:      '🏆',
   battle_defended: '🛡️',
+  level_up:        '⬆️',
 }
 
 function timeAgo(ts: number): string {
@@ -152,13 +176,14 @@ export default function PetHub({ initialUser, vipTier = 0 }: { initialUser: Disc
   useEffect(() => {
     if (!initialUser) return
     // Carrega localStorage imediatamente (sem delay)
-    const local = updateActivePetStats(loadData(initialUser.id))
+    const { data: local } = updateActivePetFull(loadData(initialUser.id))
+    saveData(local)
     setData(local)
     setActivePetObj(local.activePetId ? (local.ownedPets.find(p => p.instanceId === local.activePetId) ?? null) : null)
     // Depois tenta sincronizar com o servidor (cross-device)
     loadFromServer().then(server => {
       if (!server) return
-      const synced = updateActivePetStats(server)
+      const { data: synced } = updateActivePetFull(server)
       saveData(synced)
       setData(synced)
       setActivePetObj(synced.activePetId ? (synced.ownedPets.find(p => p.instanceId === synced.activePetId) ?? null) : null)
@@ -188,7 +213,7 @@ export default function PetHub({ initialUser, vipTier = 0 }: { initialUser: Disc
     const id = setInterval(() => {
       setData(prev => {
         if (!prev) return prev
-        const updated = updateActivePetStats(prev)
+        const { data: updated } = updateActivePetFull(prev)
         saveData(updated)
         setActivePetObj(updated.ownedPets.find(p => p.instanceId === updated.activePetId) ?? null)
         return updated
@@ -313,6 +338,9 @@ export default function PetHub({ initialUser, vipTier = 0 }: { initialUser: Disc
               <span className="text-lg">{ELEMENT_EMOJI[activePet.element]}</span>
               <span className={ELEMENT_COLOR[activePet.element]}>{activePet.element}</span>
             </div>
+
+            {/* Barra de XP */}
+            <XpBar xp={activePet.xp} level={activePet.level} />
 
             {/* Bichinho animado */}
             <LivePet petId={activePet.petId} />

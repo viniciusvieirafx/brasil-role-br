@@ -22,6 +22,10 @@ export interface IncubatingEgg {
 export const HUNGER_RATE_PER_MS = 1 / (5 * 60 * 1000)  // perde 1 de fome a cada 5 min
 export const DIRTY_RATE_PER_MS  = 1 / (7 * 60 * 1000)  // fica 1 mais sujo a cada 7 min
 
+// XP passivo
+export const DAILY_XP = 30              // XP por dia estando vivo
+export const PASSIVE_XP_PER_MIN = 0.4   // XP/min se fome>60 e limpeza>60
+
 export interface PetInstance {
   instanceId: string
   petId: number
@@ -37,11 +41,12 @@ export interface PetInstance {
   hunger: number          // 0-100, 100 = cheio
   dirty: number           // 0-100, 0 = limpo
   lastStatUpdate?: number // timestamp do último cálculo
+  lastDailyXpAt?: number  // timestamp do último XP diário
 }
 
 export interface PetNotification {
   id: string
-  type: 'egg_ready' | 'battle_win' | 'battle_defended'
+  type: 'egg_ready' | 'battle_win' | 'battle_defended' | 'level_up'
   message: string
   timestamp: number
   read: boolean
@@ -76,6 +81,7 @@ export function loadData(discordId: string): PetPlayerData {
           element: p.element ?? randomElement(),
           hunger: p.hunger ?? 80,
           dirty: p.dirty ?? 10,
+          lastDailyXpAt: p.lastDailyXpAt ?? 0,
         }))
       }
       // Migração: garantir campo notifications
@@ -203,6 +209,7 @@ export function addPet(data: PetPlayerData, petId: number, element: Element, nam
     hunger: 100,
     dirty: 0,
     lastStatUpdate: Date.now(),
+    lastDailyXpAt: 0,
   }
   return { ...data, ownedPets: [...data.ownedPets, pet] }
 }
@@ -327,6 +334,68 @@ export function updateActivePetStats(data: PetPlayerData): PetPlayerData {
     }
   })
   return { ...data, ownedPets: pets }
+}
+
+/**
+ * Atualiza stats + concede XP diário e XP passivo ao bichinho ativo.
+ * Substitui updateActivePetStats nos lugares que precisam de XP.
+ */
+export function updateActivePetFull(
+  data: PetPlayerData,
+): { data: PetPlayerData; leveledUp: boolean; newLevel: number } {
+  if (!data.activePetId) return { data, leveledUp: false, newLevel: 0 }
+  const pet = data.ownedPets.find(p => p.instanceId === data.activePetId)
+  if (!pet) return { data, leveledUp: false, newLevel: 0 }
+
+  const now = Date.now()
+  const last = pet.lastStatUpdate ?? now
+  const elapsed = Math.max(0, now - last)
+  const elapsedMinutes = elapsed / 60_000
+
+  // Tamagotchi decay
+  const hungerLost  = elapsed * HUNGER_RATE_PER_MS
+  const dirtyGained = elapsed * DIRTY_RATE_PER_MS
+
+  // XP diário (uma vez a cada 24h)
+  const DAY_MS = 24 * 60 * 60 * 1000
+  const lastDaily = pet.lastDailyXpAt ?? 0
+  const giveDailyXp = now - lastDaily >= DAY_MS
+
+  // XP passivo por minuto se bem alimentado e limpo (fome>60 e sujeira<40)
+  const wellCared = (pet.hunger ?? 100) > 60 && (pet.dirty ?? 0) < 40
+  const passiveXp = wellCared ? PASSIVE_XP_PER_MIN * elapsedMinutes : 0
+
+  const totalXp = (giveDailyXp ? DAILY_XP : 0) + passiveXp
+  const oldLevel = pet.level
+
+  const pets = data.ownedPets.map(p => {
+    if (p.instanceId !== data.activePetId) return p
+    const newXp  = p.xp + totalXp
+    const newLvl = computeLevel(newXp)
+    return {
+      ...p,
+      hunger: Math.max(0, (p.hunger ?? 100) - hungerLost),
+      dirty:  Math.min(100, (p.dirty ?? 0) + dirtyGained),
+      xp:     newXp,
+      level:  newLvl,
+      lastStatUpdate: now,
+      lastDailyXpAt:  giveDailyXp ? now : (p.lastDailyXpAt ?? 0),
+    }
+  })
+
+  const newPet  = pets.find(p => p.instanceId === data.activePetId)!
+  const leveledUp = newPet.level > oldLevel
+
+  let newData: PetPlayerData = { ...data, ownedPets: pets }
+  if (leveledUp) {
+    newData = addNotification(
+      newData,
+      'level_up',
+      `${pet.name} subiu para o nível ${newPet.level}! 🎉`,
+    )
+  }
+
+  return { data: newData, leveledUp, newLevel: newPet.level }
 }
 
 /** Alimenta o bichinho ativo (aumenta fome) */

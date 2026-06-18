@@ -80,8 +80,24 @@ export async function GET(req: NextRequest) {
         const discordId = key.replace('vip:', '')
         const raw = await kvGet(key)
         if (!raw) return null
-        let entry: { expiresAt: string; roleId: string }
+        let entry: { expiresAt: string; roleId: string; tier?: number; vitalicio?: boolean }
         try { entry = JSON.parse(raw) } catch { return null }
+
+        // Vitalícios não expiram nunca
+        if (entry.vitalicio) {
+          const member = memberMap.get(discordId)
+          return {
+            discordId,
+            username:     member?.username   ?? null,
+            globalName:   member?.globalName ?? null,
+            nick:         member?.nick       ?? null,
+            expiresAt:    entry.expiresAt,
+            diasRestantes: 99999,
+            ativo:        true,
+            tier:         entry.tier ?? 1,
+            vitalicio:    true,
+          }
+        }
 
         const exp = new Date(entry.expiresAt)
         exp.setHours(0, 0, 0, 0)
@@ -104,6 +120,8 @@ export async function GET(req: NextRequest) {
           expiresAt:      entry.expiresAt,
           diasRestantes,
           ativo:          true,
+          tier:           entry.tier ?? 1,
+          vitalicio:      false,
         }
       })
     )

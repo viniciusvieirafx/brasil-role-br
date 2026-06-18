@@ -10,6 +10,14 @@ type VipEntry = {
   expiresAt:    string
   diasRestantes: number
   ativo:        boolean
+  tier?:        1 | 2 | 3
+  vitalicio?:   boolean
+}
+
+const TIER_INFO: Record<number, { icon: string; label: string; color: string; bg: string }> = {
+  1: { icon: '🥉', label: 'Bronze', color: 'text-amber-500', bg: 'bg-amber-900/30' },
+  2: { icon: '🥈', label: 'Prata',  color: 'text-slate-300', bg: 'bg-slate-700/40' },
+  3: { icon: '🥇', label: 'Ouro',   color: 'text-yellow-400', bg: 'bg-yellow-900/30' },
 }
 
 type Propaganda = {
@@ -139,6 +147,8 @@ export default function ControlePage() {
   const [vrcEditId, setVrcEditId]     = useState<string | null>(null)
   const [vrcInput, setVrcInput]       = useState('')
   const [vrcErr, setVrcErr]           = useState<string | null>(null)
+  const [newTier, setNewTier]         = useState<1|2|3>(1)
+  const [newVitalicio, setNewVitalicio] = useState(false)
 
   // ── Sorteios ──────────────────────────────────────────────
   const [sorteio, setSorteio]             = useState<SorteioAdmin | null>(null)
@@ -427,11 +437,17 @@ export default function ControlePage() {
     const res = await fetch(`/api/controle/vips/${id}`, {
       method:  'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ expiresAt: daysFromNow(newDays) }),
+      body:    JSON.stringify({
+        expiresAt: newVitalicio ? '9999-12-31' : daysFromNow(newDays),
+        tier:      newTier,
+        vitalicio: newVitalicio,
+      }),
     })
     if (res.ok) {
       setNewId('')
       setNewDays(30)
+      setNewTier(1)
+      setNewVitalicio(false)
       await loadVips()
     } else {
       setAddErr('Erro ao adicionar')
@@ -552,9 +568,11 @@ export default function ControlePage() {
   }
 
   // ── Dashboard ────────────────────────────────────────────
-  const ativos   = vips.filter(v => v.diasRestantes > 0).length
-  const vencendo = vips.filter(v => v.diasRestantes > 0 && v.diasRestantes <= 7).length
-  const vencidos = vips.filter(v => v.diasRestantes <= 0).length
+  const vitalicioCount = vips.filter(v => v.vitalicio).length
+  const pagantes       = vips.filter(v => !v.vitalicio)
+  const ativos         = pagantes.filter(v => v.diasRestantes > 0).length
+  const vencendo       = pagantes.filter(v => v.diasRestantes > 0 && v.diasRestantes <= 7).length
+  const vencidos       = pagantes.filter(v => v.diasRestantes <= 0).length
 
   return (
     <div className="min-h-screen bg-br-dark text-white p-4 md:p-8">
@@ -590,11 +608,12 @@ export default function ControlePage() {
       {activeTab === 'vips' && (
         <>
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-3 mb-8">
+          <div className="grid grid-cols-4 gap-3 mb-8">
             {[
-              { label: 'Ativos',   value: ativos,   color: 'text-green-400' },
-              { label: 'Vencendo', value: vencendo, color: 'text-yellow-400' },
-              { label: 'Vencidos', value: vencidos, color: 'text-red-400' },
+              { label: 'Ativos',     value: ativos,         color: 'text-green-400' },
+              { label: 'Vencendo',   value: vencendo,       color: 'text-yellow-400' },
+              { label: 'Vencidos',   value: vencidos,       color: 'text-red-400' },
+              { label: 'Vitalícios', value: vitalicioCount, color: 'text-purple-400' },
             ].map(s => (
               <div key={s.label} className="bg-br-dark2 border border-white/10 rounded-xl p-4 text-center">
                 <p className={`text-3xl font-bold ${s.color}`}>{s.value}</p>
@@ -608,6 +627,7 @@ export default function ControlePage() {
             onSubmit={handleAddVip}
             className="bg-br-dark2 border border-white/10 rounded-xl p-4 mb-6 flex flex-wrap gap-3 items-end"
           >
+            {/* ID */}
             <div className="flex flex-col gap-1">
               <label className="text-xs text-white/40">ID do Discord</label>
               <input
@@ -619,25 +639,68 @@ export default function ControlePage() {
                            placeholder-white/20 focus:outline-none focus:border-br-yellow/50 w-52"
               />
             </div>
+
+            {/* Tier */}
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-white/40">Duração</label>
+              <label className="text-xs text-white/40">Tier</label>
               <div className="flex gap-1">
-                {[10, 30, 45, 60].map(d => (
+                {([1, 2, 3] as const).map(t => (
                   <button
-                    key={d}
+                    key={t}
                     type="button"
-                    onClick={() => setNewDays(d)}
+                    onClick={() => setNewTier(t)}
                     className={`text-sm px-3 py-2 rounded-lg font-medium transition-colors
-                      ${newDays === d
+                      ${newTier === t
                         ? 'bg-br-yellow text-black'
                         : 'bg-br-dark border border-white/15 text-white/60 hover:border-white/30'
                       }`}
                   >
-                    {d}d
+                    {TIER_INFO[t].icon} {TIER_INFO[t].label}
                   </button>
                 ))}
               </div>
             </div>
+
+            {/* Duração — escondida se vitalício */}
+            {!newVitalicio && (
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-white/40">Duração</label>
+                <div className="flex gap-1">
+                  {[10, 30, 45, 60].map(d => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setNewDays(d)}
+                      className={`text-sm px-3 py-2 rounded-lg font-medium transition-colors
+                        ${newDays === d
+                          ? 'bg-br-yellow text-black'
+                          : 'bg-br-dark border border-white/15 text-white/60 hover:border-white/30'
+                        }`}
+                    >
+                      {d}d
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Toggle vitalício */}
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-white/40">Vitalício</label>
+              <button
+                type="button"
+                onClick={() => setNewVitalicio(v => !v)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors
+                  ${newVitalicio
+                    ? 'bg-purple-700/50 border-purple-500/60 text-purple-200'
+                    : 'bg-br-dark border-white/15 text-white/50 hover:border-white/30'
+                  }`}
+              >
+                <span>♾️</span>
+                <span>Sem validade</span>
+              </button>
+            </div>
+
             <button
               type="submit"
               disabled={busy === 'add-new'}
@@ -703,6 +766,7 @@ export default function ControlePage() {
                     <tr className="border-b border-white/10 text-white/40 text-xs uppercase">
                       <th className="text-left px-4 py-3">Nome</th>
                       <th className="text-left px-4 py-3 hidden md:table-cell">ID Discord</th>
+                      <th className="text-left px-4 py-3">Tier</th>
                       <th className="text-left px-4 py-3">Vencimento</th>
                       <th className="text-left px-4 py-3">Dias</th>
                       <th className="text-right px-4 py-3">Ações</th>
@@ -714,12 +778,33 @@ export default function ControlePage() {
                       <tr
                         className={`border-b border-white/5 ${vrcEditId === v.discordId ? 'border-purple-900/40' : 'last:border-0'} ${i % 2 === 0 ? '' : 'bg-white/[0.02]'}`}
                       >
-                        <td className="px-4 py-3 font-medium">{displayName(v)}</td>
+                        {/* Nome + badge vitalício */}
+                        <td className="px-4 py-3 font-medium">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span>{displayName(v)}</span>
+                            {v.vitalicio && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-800/50 text-purple-300 leading-none">♾️ vitalício</span>
+                            )}
+                          </div>
+                        </td>
                         <td className="px-4 py-3 text-white/40 font-mono text-xs hidden md:table-cell">
                           {v.discordId}
                         </td>
+                        {/* Tier */}
                         <td className="px-4 py-3">
-                          {editingId === v.discordId ? (
+                          {v.tier ? (
+                            <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded ${TIER_INFO[v.tier].bg} ${TIER_INFO[v.tier].color}`}>
+                              {TIER_INFO[v.tier].icon} {TIER_INFO[v.tier].label}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-white/20">—</span>
+                          )}
+                        </td>
+                        {/* Vencimento */}
+                        <td className="px-4 py-3">
+                          {v.vitalicio ? (
+                            <span className="text-purple-400 text-sm font-bold">♾️ sem limite</span>
+                          ) : editingId === v.discordId ? (
                             <div className="flex items-center gap-2">
                               <input
                                 type="date"
@@ -748,28 +833,36 @@ export default function ControlePage() {
                             </span>
                           )}
                         </td>
+                        {/* Dias */}
                         <td className="px-4 py-3">
-                          <DaysBadge dias={v.diasRestantes} />
+                          {v.vitalicio
+                            ? <span className="text-xs text-purple-400 font-bold">∞</span>
+                            : <DaysBadge dias={v.diasRestantes} />
+                          }
                         </td>
+                        {/* Ações */}
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-end gap-2">
-                            {busy === `add-${v.discordId}` ? (
-                              <span className="text-xs text-white/40">...</span>
-                            ) : (
-                              <div className="flex gap-1">
-                                {[1, 10, 30].map(d => (
-                                  <button
-                                    key={d}
-                                    onClick={() => addDays(v.discordId, d)}
-                                    disabled={!!busy}
-                                    title={`+${d} dias`}
-                                    className="text-xs bg-green-900/40 text-green-300 hover:bg-green-900/70
-                                               px-1.5 py-1 rounded transition-colors disabled:opacity-40"
-                                  >
-                                    +{d}
-                                  </button>
-                                ))}
-                              </div>
+                            {/* Botões +dias: só para pagantes */}
+                            {!v.vitalicio && (
+                              busy === `add-${v.discordId}` ? (
+                                <span className="text-xs text-white/40">...</span>
+                              ) : (
+                                <div className="flex gap-1">
+                                  {[1, 10, 30].map(d => (
+                                    <button
+                                      key={d}
+                                      onClick={() => addDays(v.discordId, d)}
+                                      disabled={!!busy}
+                                      title={`+${d} dias`}
+                                      className="text-xs bg-green-900/40 text-green-300 hover:bg-green-900/70
+                                                 px-1.5 py-1 rounded transition-colors disabled:opacity-40"
+                                    >
+                                      +{d}
+                                    </button>
+                                  ))}
+                                </div>
+                              )
                             )}
                             <button
                               onClick={() => {
@@ -793,18 +886,21 @@ export default function ControlePage() {
                             >
                               {busy === `notify-${v.discordId}` ? '...' : 'DM'}
                             </button>
-                            <button
-                              onClick={() => {
-                                setEditingId(v.discordId)
-                                setEditDate(v.expiresAt)
-                              }}
-                              disabled={!!busy}
-                              title="Alterar data"
-                              className="text-xs bg-white/10 text-white/60 hover:bg-white/20
-                                         px-2 py-1 rounded transition-colors disabled:opacity-40"
-                            >
-                              Data
-                            </button>
+                            {/* Alterar data: só para pagantes */}
+                            {!v.vitalicio && (
+                              <button
+                                onClick={() => {
+                                  setEditingId(v.discordId)
+                                  setEditDate(v.expiresAt)
+                                }}
+                                disabled={!!busy}
+                                title="Alterar data"
+                                className="text-xs bg-white/10 text-white/60 hover:bg-white/20
+                                           px-2 py-1 rounded transition-colors disabled:opacity-40"
+                              >
+                                Data
+                              </button>
+                            )}
                             <button
                               onClick={() => removeVip(v.discordId, displayName(v))}
                               disabled={!!busy}

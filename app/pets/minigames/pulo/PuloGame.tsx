@@ -24,8 +24,8 @@ const OBS_MIN_W = 22
 const OBS_MAX_W = 38
 const OBS_MIN_H = 30
 const OBS_MAX_H = 58
-const OBS_MIN_GAP = 420    // min px between obstacles
-const OBS_MAX_GAP = 780
+const OBS_MIN_GAP = 580    // min px between obstacles
+const OBS_MAX_GAP = 1050
 
 type DisplayState = 'idle' | 'playing' | 'over' | 'tutorial'
 
@@ -53,8 +53,8 @@ function makeState(): GameState {
     jumpsLeft: 2,
     obstacles: [],
     score: 0,
-    speed: 3.5,
-    nextObstacleIn: 80,
+    speed: 2.5,
+    nextObstacleIn: 110,
     alive: true,
     walkFrame: 0,
     walkTick: 0,
@@ -199,7 +199,7 @@ export default function PuloGame({ initialUser }: { initialUser: DiscordUser | n
 
     // ── Speed ramp ───────────────────────────────────────────────────────────
     gs.score++
-    gs.speed = 3.5 + Math.min(6, gs.score / 700)
+    gs.speed = 2.5 + Math.min(4, gs.score / 1200)
 
     // ── Spawn obstacle ───────────────────────────────────────────────────────
     gs.nextObstacleIn--
