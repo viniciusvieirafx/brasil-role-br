@@ -172,9 +172,11 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
           {TIERS.map(tier => (
             <div
               key={tier.tier}
-              className={`relative rounded-2xl border-2 p-6 transition-all ${tier.borderColor} ${tier.glowColor} ${tier.badge} ${
-                selectedTier?.tier === tier.tier ? 'scale-[1.02] brightness-110' : ''
-              }`}
+              className={`relative rounded-2xl border-2 p-6 transition-all ${
+                tier.tier === 3
+                  ? 'vip-ouro-card'
+                  : `${tier.borderColor} ${tier.glowColor} ${tier.badge}`
+              } ${selectedTier?.tier === tier.tier ? 'scale-[1.02] brightness-110' : ''}`}
             >
               {tier.highlight && (
                 <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-xs font-bold bg-br-yellow text-br-dark`}>
