@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import PetSprite from '@/components/pets/PetSprite'
 import { loadData, saveData, addPoints } from '@/lib/petStore'
+import GameTutorial, { TutorialButton } from '@/components/pets/GameTutorial'
 
 interface DiscordUser { id: string; username: string; avatar: string | null; globalName: string | null }
 
@@ -18,7 +19,7 @@ const MAX_DIRTY = 8
 const SPAWN_INTERVAL_START = 1500 // ms
 
 export default function BanhoGame({ initialUser }: { initialUser: DiscordUser | null }) {
-  const [gameState, setGameState] = useState<'idle' | 'playing' | 'over'>('idle')
+  const [gameState, setGameState] = useState<'idle' | 'playing' | 'over' | 'tutorial'>('idle')
   const [spots, setSpots] = useState<DirtSpot[]>([])
   const [score, setScore] = useState(0)
   const [cleanliness, setCleanliness] = useState(100)
@@ -128,24 +129,34 @@ export default function BanhoGame({ initialUser }: { initialUser: DiscordUser | 
     <div className="max-w-lg mx-auto px-4 py-8 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">🛁 Banho</h1>
-        {gameState === 'playing' && (
-          <div className="flex gap-4 items-center text-sm">
-            <span className="text-zinc-400">⏱ {timeLeft}s</span>
-            <span className="text-white font-bold">🧼 {score}</span>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {gameState === 'playing' && (
+            <div className="flex gap-3 items-center text-sm">
+              <span className="text-zinc-400">⏱ {timeLeft}s</span>
+              <span className="text-white font-bold">🧼 {score}</span>
+            </div>
+          )}
+          <TutorialButton onClick={() => setGameState('tutorial')} />
+        </div>
       </div>
 
-      {gameState === 'idle' && (
-        <div className="text-center space-y-4 py-8">
-          <PetSprite petId={petId} size={100} animate className="mx-auto" />
-          <p className="text-zinc-400">Clique nas manchas para limpar o bichinho!</p>
-          <p className="text-zinc-500 text-sm">As manchas aparecem mais rápido com o tempo. Não deixe acumular!</p>
-          <button onClick={startGame}
-            className="px-8 py-3 bg-blue-500 hover:bg-blue-400 text-white font-bold rounded-xl transition-all hover:scale-105">
-            Começar!
-          </button>
-        </div>
+      {(gameState === 'idle' || gameState === 'tutorial') && (
+        <GameTutorial
+          title="Banho"
+          emoji="🛁"
+          startColor="bg-blue-500 hover:bg-blue-400"
+          startLabel={gameState === 'tutorial' ? 'Voltar ao início' : 'Começar!'}
+          onStart={() => gameState === 'tutorial' ? setGameState('idle') : startGame()}
+          extra={<PetSprite petId={petId} size={90} animate className="mx-auto" />}
+          steps={[
+            { emoji: '🎯', title: 'Objetivo',       desc: 'Clique nas manchas marrons no seu bichinho para limpá-lo antes que o tempo acabe!' },
+            { emoji: '👆', title: 'Como limpar',    desc: 'Toque ou clique nas manchas escuras que aparecem sobre o bichinho. Elas diminuem ao clicar.' },
+            { emoji: '⚠️', title: 'Manchas',        desc: `Novas manchas aparecem a cada momento. Você pode ter no máximo ${MAX_DIRTY} manchas ao mesmo tempo.` },
+            { emoji: '🧹', title: 'Limpeza',        desc: 'A barra de limpeza cai conforme as manchas acumulam. Mantenha-a alta!' },
+            { emoji: '⏱️', title: 'Tempo',           desc: '45 segundos para limpar o máximo possível. Foque nas manchas novas!' },
+            { emoji: '⭐', title: 'Pontos',          desc: 'Ganhe 3 pontos por mancha removida. Quanto mais rápido, mais pontos acumula!' },
+          ]}
+        />
       )}
 
       {gameState === 'playing' && (

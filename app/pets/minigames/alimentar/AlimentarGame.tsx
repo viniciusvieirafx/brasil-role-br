@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { loadData, saveData, addPoints } from '@/lib/petStore'
+import GameTutorial, { TutorialButton } from '@/components/pets/GameTutorial'
 
 interface DiscordUser { id: string; username: string; avatar: string | null; globalName: string | null }
 
@@ -37,7 +38,7 @@ export default function AlimentarGame({ initialUser }: { initialUser: DiscordUse
   const lastSecRef = useRef(0)
   const petImgRef = useRef<HTMLImageElement | null>(null)
 
-  const [displayState, setDisplayState] = useState<'idle' | 'playing' | 'over'>('idle')
+  const [displayState, setDisplayState] = useState<'idle' | 'playing' | 'over' | 'tutorial'>('idle')
   const [score, setScore] = useState(0)
   const [lives, setLives] = useState(3)
   const [timeLeft, setTimeLeft] = useState(GAME_DURATION)
@@ -218,25 +219,34 @@ export default function AlimentarGame({ initialUser }: { initialUser: DiscordUse
     <div className="max-w-lg mx-auto px-4 py-8 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">🍎 Alimentar</h1>
-        {displayState === 'playing' && (
-          <div className="flex gap-4 items-center text-sm">
-            <span className="text-zinc-400">⏱ {timeLeft}s</span>
-            <span className="text-white font-bold">{score} pts</span>
-            <span>{livesDisplay}</span>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {displayState === 'playing' && (
+            <div className="flex gap-3 items-center text-sm">
+              <span className="text-zinc-400">⏱ {timeLeft}s</span>
+              <span className="text-white font-bold">{score} pts</span>
+              <span>{livesDisplay}</span>
+            </div>
+          )}
+          <TutorialButton onClick={() => { cancelAnimationFrame(rafRef.current); aliveRef.current = false; setDisplayState('tutorial') }} />
+        </div>
       </div>
 
-      {displayState === 'idle' && (
-        <div className="text-center space-y-4 py-8">
-          <div className="text-6xl animate-bounce">🍎</div>
-          <p className="text-zinc-400">Clique nas comidas antes de caírem!</p>
-          <p className="text-zinc-500 text-sm">3 vidas · {GAME_DURATION} segundos</p>
-          <button onClick={startGame}
-            className="px-8 py-3 bg-red-500 hover:bg-red-400 text-white font-bold rounded-xl transition-all hover:scale-105">
-            Começar!
-          </button>
-        </div>
+      {(displayState === 'idle' || displayState === 'tutorial') && (
+        <GameTutorial
+          title="Alimentar"
+          emoji="🍎"
+          startColor="bg-red-500 hover:bg-red-400"
+          startLabel={displayState === 'tutorial' ? 'Voltar ao início' : 'Começar!'}
+          onStart={() => displayState === 'tutorial' ? setDisplayState('idle') : startGame()}
+          steps={[
+            { emoji: '🎯', title: 'Objetivo',      desc: `Clique nas comidas que caem antes que elas saiam da tela. Você tem ${GAME_DURATION} segundos.` },
+            { emoji: '👆', title: 'Como coletar',  desc: 'Clique ou toque diretamente na comida para coletar. Seja rápido!' },
+            { emoji: '❤️', title: 'Vidas',          desc: 'Você tem 3 vidas. Cada comida que escapa tira uma vida. Se perder todas, o jogo acaba.' },
+            { emoji: '🍽️', title: 'Saciedade',      desc: 'Cada comida coletada aumenta a saciedade do seu bichinho. Encha a barra!' },
+            { emoji: '⭐', title: 'Pontos',         desc: 'Ganhe 2 pontos por comida coletada. Quanto mais coletar, mais pontos!' },
+            { emoji: '⚡', title: 'Dificuldade',    desc: 'Com o tempo, as comidas caem mais rápido. Fique atento!' },
+          ]}
+        />
       )}
 
       {displayState === 'playing' && (

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { loadData, saveData, addPoints, updateHighScore } from '@/lib/petStore'
+import GameTutorial, { TutorialButton } from '@/components/pets/GameTutorial'
 
 interface DiscordUser { id: string; username: string; avatar: string | null; globalName: string | null }
 
@@ -48,7 +49,7 @@ export default function PuloGame({ initialUser }: { initialUser: DiscordUser | n
   const stateRef = useRef<GameState>(makeInitialState())
   const keysRef = useRef<Set<string>>(new Set())
   const rafRef = useRef<number>(0)
-  const [displayState, setDisplayState] = useState<'idle' | 'playing' | 'over'>('idle')
+  const [displayState, setDisplayState] = useState<'idle' | 'playing' | 'over' | 'tutorial'>('idle')
   const [score, setScore] = useState(0)
   const [highScore, setHighScore] = useState(0)
   const [earned, setEarned] = useState(0)
@@ -273,25 +274,27 @@ export default function PuloGame({ initialUser }: { initialUser: DiscordUser | n
     <div className="max-w-lg mx-auto px-4 py-4 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">🪂 Pulo Infinito</h1>
-        <div className="text-sm text-zinc-400">
-          🏆 Recorde: <span className="text-yellow-400 font-bold">{highScore}m</span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-zinc-400">🏆 <span className="text-yellow-400 font-bold">{highScore}m</span></span>
+          <TutorialButton onClick={() => { cancelAnimationFrame(rafRef.current); setDisplayState('tutorial') }} />
         </div>
       </div>
 
       {displayState === 'idle' && (
-        <div className="text-center space-y-4 py-6">
-          <div className="text-6xl animate-bounce">🪂</div>
-          <p className="text-zinc-400">Pule de plataforma em plataforma!</p>
-          <div className="text-zinc-500 text-sm space-y-1">
-            <p>⬅ ➡ Setas ou A/D para mover</p>
-            <p>📱 Mobile: arraste para os lados</p>
-            <p>A dificuldade aumenta com a altura!</p>
-          </div>
-          <button onClick={startGame}
-            className="px-8 py-3 bg-green-500 hover:bg-green-400 text-white font-bold rounded-xl transition-all hover:scale-105">
-            Começar!
-          </button>
-        </div>
+        <GameTutorial
+          title="Pulo Infinito"
+          emoji="🪂"
+          startColor="bg-green-500 hover:bg-green-400"
+          onStart={startGame}
+          steps={[
+            { emoji: '🎯', title: 'Objetivo',        desc: 'Suba o máximo possível pulando de plataforma em plataforma sem cair.' },
+            { emoji: '⬅➡', title: 'Movimento',       desc: 'Setas do teclado ou teclas A/D para mover para os lados.' },
+            { emoji: '📱', title: 'Mobile',           desc: 'No celular, arraste o dedo para a esquerda ou direita na tela.' },
+            { emoji: '🔄', title: 'Wrap de tela',     desc: 'Saiu pela esquerda? Volta pela direita! Use isso a seu favor.' },
+            { emoji: '⚡', title: 'Dificuldade',      desc: 'Quanto mais alto você sobe, maior o espaço entre as plataformas.' },
+            { emoji: '⭐', title: 'Pontos',           desc: 'Ganhe pontos baseado na altura atingida. Bata seu recorde!' },
+          ]}
+        />
       )}
 
       {displayState === 'playing' && (
@@ -312,6 +315,24 @@ export default function PuloGame({ initialUser }: { initialUser: DiscordUser | n
           />
           <p className="text-center text-zinc-600 text-xs">Setas / A-D para mover · Mobile: arraste</p>
         </div>
+      )}
+
+      {displayState === 'tutorial' && (
+        <GameTutorial
+          title="Pulo Infinito"
+          emoji="🪂"
+          startLabel="Voltar ao jogo"
+          startColor="bg-zinc-600 hover:bg-zinc-500"
+          onStart={() => setDisplayState('idle')}
+          steps={[
+            { emoji: '🎯', title: 'Objetivo',        desc: 'Suba o máximo possível pulando de plataforma em plataforma sem cair.' },
+            { emoji: '⬅➡', title: 'Movimento',       desc: 'Setas do teclado ou teclas A/D para mover para os lados.' },
+            { emoji: '📱', title: 'Mobile',           desc: 'No celular, arraste o dedo para a esquerda ou direita na tela.' },
+            { emoji: '🔄', title: 'Wrap de tela',     desc: 'Saiu pela esquerda? Volta pela direita! Use isso a seu favor.' },
+            { emoji: '⚡', title: 'Dificuldade',      desc: 'Quanto mais alto você sobe, maior o espaço entre as plataformas.' },
+            { emoji: '⭐', title: 'Pontos',           desc: 'Ganhe pontos baseado na altura atingida. Bata seu recorde!' },
+          ]}
+        />
       )}
 
       {displayState === 'over' && (
