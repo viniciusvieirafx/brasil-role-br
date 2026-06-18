@@ -2,9 +2,10 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import PetAnimator, { type AnimType } from '@/components/pets/PetAnimator'
 import {
-  loadData, saveData, giveFirstEgg, loadFromServer,
+  loadData, saveData, giveFirstEgg, startIncubation, loadFromServer,
   type PetPlayerData, type PetInstance,
 } from '@/lib/petStore'
 import { getPet, RARITY_STYLE, ELEMENT_EMOJI, ELEMENT_COLOR, CAPSULE_COST } from '@/lib/petData'
@@ -51,6 +52,7 @@ function LivePet({ petId }: { petId: number }) {
 
 // ── Hub principal ─────────────────────────────────────────────────────────────
 export default function PetHub({ initialUser }: { initialUser: DiscordUser | null }) {
+  const router = useRouter()
   const [data, setData] = useState<PetPlayerData | null>(null)
   const [activePet, setActivePetObj] = useState<PetInstance | null>(null)
   const [secsLeft, setSecsLeft] = useState(0)
@@ -81,9 +83,12 @@ export default function PetHub({ initialUser }: { initialUser: DiscordUser | nul
   function handleStart() {
     if (!initialUser || !data) return
     playSuccess()
-    const updated = giveFirstEgg(data)
+    const withEgg = giveFirstEgg(data)
+    const firstEgg = withEgg.ownedEggs[withEgg.ownedEggs.length - 1]
+    const updated = startIncubation(withEgg, firstEgg.instanceId)
     saveData(updated)
     setData(updated)
+    router.push('/pets/ovos')
   }
 
   // ── Not logged in ─────────────────────────────────────────────────────
