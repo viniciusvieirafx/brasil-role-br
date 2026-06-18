@@ -6,262 +6,278 @@ import GameTutorial, { TutorialButton } from '@/components/pets/GameTutorial'
 
 interface DiscordUser { id: string; username: string; avatar: string | null; globalName: string | null }
 
-// Game constants
+// ── Canvas dimensions ──────────────────────────────────────────────────────────
 const W = 360
-const H = 560
-const GRAVITY = 0.4
-const JUMP_FORCE = -11
-const PLAYER_W = 32
-const PLAYER_H = 32
-const PLATFORM_H = 14
-const PLATFORM_W_MIN = 60
-const PLATFORM_W_MAX = 100
-const INITIAL_PLATFORM_GAP = 90
-const MAX_PLATFORM_GAP = 190
+const H = 220
+const GROUND_Y = H - 40       // y do chão (topo)
+const PLAYER_X = 60
+const PLAYER_W = 48
+const PLAYER_H = 48
 
-interface Platform { x: number; y: number; w: number; moving?: boolean; dir?: 1 | -1; speed?: number }
-interface Player { x: number; y: number; vx: number; vy: number }
-interface GameState { player: Player; platforms: Platform[]; cameraY: number; score: number; alive: boolean }
+// ── Physics ────────────────────────────────────────────────────────────────────
+const GRAVITY = 0.55
+const JUMP_FORCE = -12.5
+const DOUBLE_JUMP_FORCE = -11
 
-function makeInitialState(): GameState {
-  const platforms: Platform[] = []
-  // Starting platform under player
-  platforms.push({ x: W / 2 - 50, y: H - 80, w: 100 })
-  // Generate initial set of platforms
-  for (let i = 1; i < 12; i++) {
-    platforms.push({
-      x: Math.random() * (W - 90),
-      y: H - 80 - i * INITIAL_PLATFORM_GAP,
-      w: PLATFORM_W_MIN + Math.random() * (PLATFORM_W_MAX - PLATFORM_W_MIN),
-    })
-  }
+// ── Obstacle config ────────────────────────────────────────────────────────────
+const OBS_MIN_W = 20
+const OBS_MAX_W = 36
+const OBS_MIN_H = 28
+const OBS_MAX_H = 56
+const OBS_MIN_GAP = 260    // min px between obstacles
+const OBS_MAX_GAP = 520
+
+type DisplayState = 'idle' | 'playing' | 'over' | 'tutorial'
+
+interface Obstacle { x: number; w: number; h: number }
+
+interface GameState {
+  playerY: number
+  vy: number
+  onGround: boolean
+  jumpsLeft: number        // 2 = double jump disponível
+  obstacles: Obstacle[]
+  score: number            // frames vivos
+  speed: number            // px/frame
+  nextObstacleIn: number   // frames até próximo obstáculo
+  alive: boolean
+  walkFrame: number
+  walkTick: number
+}
+
+function makeState(): GameState {
   return {
-    player: { x: W / 2 - PLAYER_W / 2, y: H - 80 - PLAYER_H, vx: 0, vy: -2 },
-    platforms,
-    cameraY: 0,
+    playerY: GROUND_Y - PLAYER_H,
+    vy: 0,
+    onGround: true,
+    jumpsLeft: 2,
+    obstacles: [],
     score: 0,
+    speed: 5,
+    nextObstacleIn: 80,
     alive: true,
+    walkFrame: 0,
+    walkTick: 0,
   }
 }
 
 export default function PuloGame({ initialUser }: { initialUser: DiscordUser | null }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const stateRef = useRef<GameState>(makeInitialState())
-  const keysRef = useRef<Set<string>>(new Set())
-  const rafRef = useRef<number>(0)
-  const [displayState, setDisplayState] = useState<'idle' | 'playing' | 'over' | 'tutorial'>('idle')
+  const gsRef = useRef<GameState>(makeState())
+  const rafRef = useRef(0)
+  const petImgRef = useRef<HTMLImageElement | null>(null)
+  const petImgWalkRef = useRef<HTMLImageElement | null>(null)
+  const jumpPressedRef = useRef(false)   // evita repeat de keydown
+
+  const [displayState, setDisplayState] = useState<DisplayState>('idle')
   const [score, setScore] = useState(0)
   const [highScore, setHighScore] = useState(0)
   const [earned, setEarned] = useState(0)
-  const touchStartX = useRef<number | null>(null)
 
-  // Load high score
+  // Load high score + sprites
   useEffect(() => {
     if (!initialUser) return
     const d = loadData(initialUser.id)
     setHighScore(d.highScore)
+    const pid = d.ownedPets.find(p => p.instanceId === d.activePetId)?.petId ?? 1
+    const pad = String(pid).padStart(3, '0')
+
+    const idle = new Image()
+    idle.src = `/pets/sprites/monster_${pad}_idle.png`
+    idle.onload = () => { petImgRef.current = idle }
+
+    const walk = new Image()
+    walk.src = `/pets/sprites/monster_${pad}_walk.png`
+    walk.onload = () => { petImgWalkRef.current = walk }
   }, [initialUser])
 
-  const petSprite = useRef<HTMLImageElement | null>(null)
-  useEffect(() => {
-    if (!initialUser) return
-    const d = loadData(initialUser.id)
-    const pid = d.ownedPets.find(p => p.instanceId === d.activePetId)?.petId ?? 1
-    const img = new Image()
-    img.src = `/pets/sprites/monster_${String(pid).padStart(3, '0')}_walk.png`
-    img.onload = () => { petSprite.current = img }
-  }, [initialUser])
+  function doJump() {
+    const gs = gsRef.current
+    if (!gs.alive) return
+    if (gs.jumpsLeft > 0) {
+      gs.vy = gs.jumpsLeft === 2 ? JUMP_FORCE : DOUBLE_JUMP_FORCE
+      gs.onGround = false
+      gs.jumpsLeft--
+    }
+  }
 
   const drawFrame = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')!
-    const gs = stateRef.current
+    const gs = gsRef.current
 
-    // Clear
+    // ── Background ──────────────────────────────────────────────────────────
     ctx.fillStyle = '#0A0718'
     ctx.fillRect(0, 0, W, H)
 
-    // Stars background
-    ctx.fillStyle = 'rgba(255,255,255,0.3)'
-    for (let i = 0; i < 30; i++) {
-      const sx = (i * 37 + gs.cameraY * 0.05) % W
-      const sy = (i * 53 + gs.cameraY * 0.1) % H
-      ctx.fillRect(sx, sy, 1.5, 1.5)
+    // Stars
+    ctx.fillStyle = 'rgba(255,255,255,0.25)'
+    for (let i = 0; i < 25; i++) {
+      ctx.fillRect((i * 43 + gs.score * 0.3) % W, (i * 31) % (GROUND_Y - 20), 1.5, 1.5)
     }
 
-    // Platforms
-    gs.platforms.forEach(p => {
-      const drawY = p.y + gs.cameraY
-      if (drawY < -PLATFORM_H || drawY > H + 10) return
+    // Ground
+    ctx.fillStyle = '#FFD700'
+    ctx.fillRect(0, GROUND_Y, W, 3)
+    ctx.fillStyle = '#3a2e00'
+    ctx.fillRect(0, GROUND_Y + 3, W, H - GROUND_Y - 3)
 
-      // Platform glow
-      ctx.shadowColor = '#FFD700'
-      ctx.shadowBlur = 8
-      ctx.fillStyle = '#1a1530'
+    // Ground detail (dashed line moving)
+    ctx.fillStyle = 'rgba(255,215,0,0.2)'
+    for (let i = 0; i < 6; i++) {
+      const x = ((i * 70) - (gs.score * gs.speed * 0.5) % 70 + 700) % W
+      ctx.fillRect(x, GROUND_Y + 8, 40, 2)
+    }
+
+    // ── Obstacles ───────────────────────────────────────────────────────────
+    for (const obs of gs.obstacles) {
+      // Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.3)'
+      ctx.fillRect(obs.x + 3, GROUND_Y + 2, obs.w, 4)
+      // Body gradient-ish
+      ctx.fillStyle = '#ef4444'
       ctx.beginPath()
-      ctx.roundRect(p.x, drawY, p.w, PLATFORM_H, 6)
+      ctx.roundRect(obs.x, GROUND_Y - obs.h, obs.w, obs.h, 4)
       ctx.fill()
-      ctx.shadowBlur = 0
+      ctx.fillStyle = '#fca5a5'
+      ctx.fillRect(obs.x + 3, GROUND_Y - obs.h + 3, obs.w - 6, 5)
+    }
 
-      ctx.fillStyle = '#FFD700'
-      ctx.fillRect(p.x, drawY, p.w, 4)
-      ctx.fillStyle = '#B8860B'
-      ctx.fillRect(p.x, drawY + 4, p.w, PLATFORM_H - 4)
-    })
-
-    // Player
-    const px = gs.player.x
-    const py = gs.player.y + gs.cameraY
-    if (petSprite.current) {
-      ctx.drawImage(petSprite.current, px - 4, py - 4, PLAYER_W + 8, PLAYER_H + 8)
+    // ── Player ──────────────────────────────────────────────────────────────
+    const py = gs.playerY
+    const img = gs.onGround ? (petImgWalkRef.current ?? petImgRef.current) : petImgRef.current
+    if (img) {
+      ctx.drawImage(img, PLAYER_X, py, PLAYER_W, PLAYER_H)
     } else {
       ctx.fillStyle = '#FFD700'
       ctx.beginPath()
-      ctx.roundRect(px, py, PLAYER_W, PLAYER_H, 8)
+      ctx.roundRect(PLAYER_X, py, PLAYER_W, PLAYER_H, 8)
+      ctx.fill()
+      ctx.font = '28px serif'
+      ctx.textAlign = 'center'
+      ctx.fillText('🐾', PLAYER_X + PLAYER_W / 2, py + PLAYER_H - 6)
+    }
+
+    // Double-jump indicator (small dot above player when 1 jump used)
+    if (!gs.onGround && gs.jumpsLeft > 0) {
+      ctx.fillStyle = 'rgba(255,215,0,0.7)'
+      ctx.beginPath()
+      ctx.arc(PLAYER_X + PLAYER_W / 2, py - 8, 4, 0, Math.PI * 2)
       ctx.fill()
     }
 
-    // Score
+    // ── HUD ─────────────────────────────────────────────────────────────────
     ctx.fillStyle = 'rgba(255,255,255,0.9)'
-    ctx.font = 'bold 16px sans-serif'
-    ctx.fillText(`${Math.floor(gs.score)}m`, 12, 28)
-    ctx.fillStyle = 'rgba(255,215,0,0.7)'
-    ctx.font = '12px sans-serif'
-    ctx.fillText(`⬆ ${Math.floor(gs.score)}`, W - 70, 28)
-  }, [])
+    ctx.font = 'bold 15px sans-serif'
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'top'
+    ctx.fillText(`${Math.floor(gs.score / 6)}m`, 10, 10)
+
+    ctx.fillStyle = 'rgba(255,215,0,0.6)'
+    ctx.font = '11px sans-serif'
+    ctx.textAlign = 'right'
+    ctx.fillText(`REC ${highScore}m`, W - 10, 10)
+  }, [highScore])
 
   const gameLoop = useCallback(() => {
-    const gs = stateRef.current
+    const gs = gsRef.current
     if (!gs.alive) return
 
-    const keys = keysRef.current
-    // Horizontal movement
-    if (keys.has('ArrowLeft') || keys.has('a') || keys.has('A')) gs.player.vx = -5
-    else if (keys.has('ArrowRight') || keys.has('d') || keys.has('D')) gs.player.vx = 5
-    else gs.player.vx *= 0.8
+    // ── Physics ──────────────────────────────────────────────────────────────
+    gs.vy += GRAVITY
+    gs.playerY += gs.vy
 
-    // Wrap sides
-    gs.player.x += gs.player.vx
-    if (gs.player.x + PLAYER_W < 0) gs.player.x = W
-    if (gs.player.x > W) gs.player.x = -PLAYER_W
+    if (gs.playerY >= GROUND_Y - PLAYER_H) {
+      gs.playerY = GROUND_Y - PLAYER_H
+      gs.vy = 0
+      gs.onGround = true
+      gs.jumpsLeft = 2
+    } else {
+      gs.onGround = false
+    }
 
-    // Gravity
-    gs.player.vy += GRAVITY
-    gs.player.y += gs.player.vy
+    // ── Speed ramp ───────────────────────────────────────────────────────────
+    gs.score++
+    gs.speed = 5 + Math.min(8, gs.score / 400)
 
-    // Difficulty: gap increases with score
-    const gapFactor = Math.min(1, gs.score / 500)
-    const platformGap = INITIAL_PLATFORM_GAP + gapFactor * (MAX_PLATFORM_GAP - INITIAL_PLATFORM_GAP)
+    // ── Spawn obstacle ───────────────────────────────────────────────────────
+    gs.nextObstacleIn--
+    if (gs.nextObstacleIn <= 0) {
+      const h = OBS_MIN_H + Math.random() * (OBS_MAX_H - OBS_MIN_H)
+      const w = OBS_MIN_W + Math.random() * (OBS_MAX_W - OBS_MIN_W)
+      gs.obstacles.push({ x: W + 10, w, h })
+      const gap = OBS_MIN_GAP + Math.random() * (OBS_MAX_GAP - OBS_MIN_GAP)
+      gs.nextObstacleIn = Math.floor(gap / gs.speed)
+    }
 
-    // Platform collision (only when falling) — tudo em coordenadas de MUNDO, sem cameraY
-    if (gs.player.vy > 0) {
-      for (const p of gs.platforms) {
-        const px = gs.player.x, py = gs.player.y
-        if (
-          py + PLAYER_H >= p.y &&
-          py + PLAYER_H <= p.y + PLATFORM_H + gs.player.vy + 2 &&
-          px + PLAYER_W > p.x + 4 &&
-          px < p.x + p.w - 4
-        ) {
-          gs.player.vy = JUMP_FORCE
-          break
+    // ── Move + prune obstacles ────────────────────────────────────────────────
+    gs.obstacles = gs.obstacles
+      .map(o => ({ ...o, x: o.x - gs.speed }))
+      .filter(o => o.x + o.w > -10)
+
+    // ── Collision ────────────────────────────────────────────────────────────
+    const margin = 6
+    for (const obs of gs.obstacles) {
+      const px1 = PLAYER_X + margin, px2 = PLAYER_X + PLAYER_W - margin
+      const py1 = gs.playerY + margin, py2 = gs.playerY + PLAYER_H - margin
+      const ox1 = obs.x, ox2 = obs.x + obs.w
+      const oy1 = GROUND_Y - obs.h, oy2 = GROUND_Y
+      if (px1 < ox2 && px2 > ox1 && py1 < oy2 && py2 > oy1) {
+        gs.alive = false
+        const finalScore = Math.floor(gs.score / 6)
+        setScore(finalScore)
+        setDisplayState('over')
+        if (initialUser) {
+          const d = loadData(initialUser.id)
+          const pts = Math.floor(finalScore / 5)
+          setEarned(pts)
+          saveData(updateHighScore(addPoints(d, pts), finalScore))
+          setHighScore(prev => Math.max(prev, finalScore))
         }
+        drawFrame()
+        return
       }
     }
 
-    // Camera scroll when player rises above 40% height
-    const threshold = H * 0.4
-    const playerScreenY = gs.player.y + gs.cameraY
-    if (playerScreenY < threshold) {
-      const diff = threshold - playerScreenY
-      gs.cameraY += diff
-      gs.score += diff * 0.1
-      setScore(Math.floor(gs.score))
-    }
-
-    // Move platforms (difficulty: some start moving at score > 200)
-    gs.platforms.forEach(p => {
-      if (p.moving && p.speed) {
-        p.x += p.dir! * p.speed
-        if (p.x <= 0 || p.x + p.w >= W) p.dir = p.dir === 1 ? -1 : 1
-      }
-    })
-
-    // Remove off-screen platforms, generate new ones
-    const topPlatformY = Math.min(...gs.platforms.map(p => p.y + gs.cameraY))
-    if (topPlatformY > -50) {
-      const newY = topPlatformY - platformGap
-      const moving = gs.score > 200 && Math.random() < 0.3
-      gs.platforms.push({
-        x: Math.random() * (W - 90),
-        y: newY - gs.cameraY,
-        w: Math.max(40, PLATFORM_W_MAX - gs.score * 0.05),
-        moving,
-        dir: 1,
-        speed: 1 + Math.random() * 1.5,
-      })
-    }
-    gs.platforms = gs.platforms.filter(p => p.y + gs.cameraY < H + 20)
-
-    // Death: fell below screen
-    if (gs.player.y + gs.cameraY > H + 50) {
-      gs.alive = false
-      stateRef.current = gs
-      const finalScore = Math.floor(gs.score)
-      setDisplayState('over')
-      setScore(finalScore)
-
-      if (initialUser) {
-        const d = loadData(initialUser.id)
-        const pts = Math.floor(finalScore / 10)
-        setEarned(pts)
-        saveData(updateHighScore(addPoints(d, pts), finalScore))
-        setHighScore(prev => Math.max(prev, finalScore))
-      }
-      return
-    }
-
-    stateRef.current = gs
+    setScore(Math.floor(gs.score / 6))
     drawFrame()
     rafRef.current = requestAnimationFrame(gameLoop)
   }, [drawFrame, initialUser])
 
   function startGame() {
     cancelAnimationFrame(rafRef.current)
-    stateRef.current = makeInitialState()
-    setDisplayState('playing')
+    gsRef.current = makeState()
+    jumpPressedRef.current = false
     setScore(0)
-    // Start loop after brief delay to let state update
+    setDisplayState('playing')
     setTimeout(() => {
       rafRef.current = requestAnimationFrame(gameLoop)
     }, 50)
   }
 
-  // Keyboard handlers
+  // Keyboard
   useEffect(() => {
     if (displayState !== 'playing') return
-    const down = (e: KeyboardEvent) => keysRef.current.add(e.key)
-    const up = (e: KeyboardEvent) => keysRef.current.delete(e.key)
-    window.addEventListener('keydown', down)
-    window.addEventListener('keyup', up)
-    return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up) }
+    function onDown(e: KeyboardEvent) {
+      if ((e.code === 'Space' || e.code === 'ArrowUp' || e.key === 'w' || e.key === 'W') && !jumpPressedRef.current) {
+        jumpPressedRef.current = true
+        e.preventDefault()
+        doJump()
+      }
+    }
+    function onUp(e: KeyboardEvent) {
+      if (e.code === 'Space' || e.code === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+        jumpPressedRef.current = false
+      }
+    }
+    window.addEventListener('keydown', onDown)
+    window.addEventListener('keyup', onUp)
+    return () => { window.removeEventListener('keydown', onDown); window.removeEventListener('keyup', onUp) }
   }, [displayState])
 
-  // Touch controls
-  function handleTouchStart(e: React.TouchEvent) {
-    touchStartX.current = e.touches[0].clientX
-  }
-  function handleTouchMove(e: React.TouchEvent) {
-    if (touchStartX.current === null) return
-    const dx = e.touches[0].clientX - touchStartX.current
-    if (dx < -10) { keysRef.current.add('ArrowLeft'); keysRef.current.delete('ArrowRight') }
-    else if (dx > 10) { keysRef.current.add('ArrowRight'); keysRef.current.delete('ArrowLeft') }
-  }
-  function handleTouchEnd() {
-    keysRef.current.delete('ArrowLeft')
-    keysRef.current.delete('ArrowRight')
-    touchStartX.current = null
+  function handleCanvasTap() {
+    if (displayState === 'playing') doJump()
   }
 
   if (!initialUser) return (
@@ -270,76 +286,69 @@ export default function PuloGame({ initialUser }: { initialUser: DiscordUser | n
     </div>
   )
 
+  const steps = [
+    { emoji: '🎯', title: 'Objetivo',       desc: 'Corra o máximo possível sem bater nos obstáculos vermelhos!' },
+    { emoji: '⬆️', title: 'Pular',           desc: 'Pressione Espaço, ↑ ou toque na tela para pular.' },
+    { emoji: '✌️', title: 'Pulo duplo',      desc: 'Você pode pular duas vezes no ar! Use para obstáculos altos.' },
+    { emoji: '⚡', title: 'Velocidade',      desc: 'O jogo acelera com o tempo — fique ligado!' },
+    { emoji: '📏', title: 'Pontuação',       desc: 'Quanto mais longe você chegar, mais metros e mais pontos!' },
+    { emoji: '⭐', title: 'Recompensa',      desc: 'Ganhe pontos de pet a cada 5 metros percorridos.' },
+  ]
+
   return (
     <div className="max-w-lg mx-auto px-4 py-4 space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">🪂 Pulo Infinito</h1>
+        <h1 className="text-2xl font-bold text-white">🦕 Corrida Infinita</h1>
         <div className="flex items-center gap-3">
           <span className="text-sm text-zinc-400">🏆 <span className="text-yellow-400 font-bold">{highScore}m</span></span>
-          <TutorialButton onClick={() => { cancelAnimationFrame(rafRef.current); setDisplayState('tutorial') }} />
+          <TutorialButton onClick={() => { cancelAnimationFrame(rafRef.current); gsRef.current.alive = false; setDisplayState('tutorial') }} />
         </div>
       </div>
 
       {displayState === 'idle' && (
         <GameTutorial
-          title="Pulo Infinito"
-          emoji="🪂"
+          title="Corrida Infinita"
+          emoji="🦕"
           startColor="bg-green-500 hover:bg-green-400"
           onStart={startGame}
-          steps={[
-            { emoji: '🎯', title: 'Objetivo',        desc: 'Suba o máximo possível pulando de plataforma em plataforma sem cair.' },
-            { emoji: '⬅➡', title: 'Movimento',       desc: 'Setas do teclado ou teclas A/D para mover para os lados.' },
-            { emoji: '📱', title: 'Mobile',           desc: 'No celular, arraste o dedo para a esquerda ou direita na tela.' },
-            { emoji: '🔄', title: 'Wrap de tela',     desc: 'Saiu pela esquerda? Volta pela direita! Use isso a seu favor.' },
-            { emoji: '⚡', title: 'Dificuldade',      desc: 'Quanto mais alto você sobe, maior o espaço entre as plataformas.' },
-            { emoji: '⭐', title: 'Pontos',           desc: 'Ganhe pontos baseado na altura atingida. Bata seu recorde!' },
-          ]}
+          steps={steps}
+        />
+      )}
+
+      {displayState === 'tutorial' && (
+        <GameTutorial
+          title="Corrida Infinita"
+          emoji="🦕"
+          startLabel="Voltar"
+          startColor="bg-zinc-600 hover:bg-zinc-500"
+          onStart={() => setDisplayState('idle')}
+          steps={steps}
         />
       )}
 
       {displayState === 'playing' && (
         <div className="space-y-2">
           <div className="flex justify-between text-sm text-zinc-400">
-            <span>Altura: <span className="text-white font-bold">{score}m</span></span>
+            <span>Distância: <span className="text-white font-bold">{score}m</span></span>
             <span>Recorde: <span className="text-yellow-400">{highScore}m</span></span>
           </div>
           <canvas
             ref={canvasRef}
             width={W}
             height={H}
-            className="rounded-2xl border-2 border-zinc-700 w-full touch-none"
+            onClick={handleCanvasTap}
+            className="rounded-2xl border-2 border-zinc-700 w-full cursor-pointer touch-none"
             style={{ maxWidth: W, display: 'block', margin: '0 auto' }}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
           />
-          <p className="text-center text-zinc-600 text-xs">Setas / A-D para mover · Mobile: arraste</p>
+          <p className="text-center text-zinc-600 text-xs">Espaço / ↑ / Toque para pular · Pulo duplo disponível!</p>
         </div>
-      )}
-
-      {displayState === 'tutorial' && (
-        <GameTutorial
-          title="Pulo Infinito"
-          emoji="🪂"
-          startLabel="Voltar ao jogo"
-          startColor="bg-zinc-600 hover:bg-zinc-500"
-          onStart={() => setDisplayState('idle')}
-          steps={[
-            { emoji: '🎯', title: 'Objetivo',        desc: 'Suba o máximo possível pulando de plataforma em plataforma sem cair.' },
-            { emoji: '⬅➡', title: 'Movimento',       desc: 'Setas do teclado ou teclas A/D para mover para os lados.' },
-            { emoji: '📱', title: 'Mobile',           desc: 'No celular, arraste o dedo para a esquerda ou direita na tela.' },
-            { emoji: '🔄', title: 'Wrap de tela',     desc: 'Saiu pela esquerda? Volta pela direita! Use isso a seu favor.' },
-            { emoji: '⚡', title: 'Dificuldade',      desc: 'Quanto mais alto você sobe, maior o espaço entre as plataformas.' },
-            { emoji: '⭐', title: 'Pontos',           desc: 'Ganhe pontos baseado na altura atingida. Bata seu recorde!' },
-          ]}
-        />
       )}
 
       {displayState === 'over' && (
         <div className="text-center space-y-4 py-6">
           <div className="text-5xl">💥</div>
-          <h2 className="text-white text-2xl font-bold">Você caiu!</h2>
-          <p className="text-zinc-400">Altura: <span className="text-white font-bold">{score}m</span></p>
+          <h2 className="text-white text-2xl font-bold">Bateu!</h2>
+          <p className="text-zinc-400">Distância: <span className="text-white font-bold">{score}m</span></p>
           {score >= highScore && score > 0 && (
             <p className="text-yellow-400 font-bold animate-pulse">🏆 Novo Recorde!</p>
           )}
