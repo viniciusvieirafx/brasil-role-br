@@ -67,6 +67,22 @@ export default function PetAnimator({
     img.onload = () => {
       if (active) imgRef.current = { img, anim }
     }
+    img.onerror = () => {
+      // Fallback: draw a colored placeholder emoji on canvas
+      if (!active) return
+      const canvas = canvasRef.current
+      if (!canvas) return
+      const ctx = canvas.getContext('2d')!
+      ctx.clearRect(0, 0, width, height)
+      ctx.fillStyle = 'rgba(255,215,0,0.15)'
+      ctx.beginPath()
+      ctx.roundRect(0, 0, width, height, width * 0.2)
+      ctx.fill()
+      ctx.font = `${Math.floor(width * 0.55)}px serif`
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText('🐾', width / 2, height / 2)
+    }
     return () => { active = false }
   }, [petId, anim])
 

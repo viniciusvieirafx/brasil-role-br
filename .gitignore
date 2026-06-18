@@ -21,6 +21,3 @@ out/
 *.tsbuildinfo
 next-env.d.ts
 
-# pet sprites (arquivos grandes — servir via CDN ou Vercel Blob)
-public/pets/sprites/
-public/pets/strips/
