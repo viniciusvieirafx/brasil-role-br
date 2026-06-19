@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers'
 import PetHub from './PetHub'
+import ClickerSidebars from './ClickerSidebars'
 import { getVipTier } from '@/lib/getVipTier'
 
 export default async function PetsPage() {
@@ -8,5 +9,10 @@ export default async function PetsPage() {
   const user = raw ? JSON.parse(raw) : null
   const vipTier: number = user ? await getVipTier(user.id) : 0
 
-  return <PetHub initialUser={user} vipTier={vipTier} />
+  return (
+    <>
+      <ClickerSidebars initialUser={user} />
+      <PetHub initialUser={user} vipTier={vipTier} />
+    </>
+  )
 }
