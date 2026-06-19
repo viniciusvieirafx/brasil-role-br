@@ -38,6 +38,7 @@ export default function ClickSound() {
     }
 
     const handleClick = (e: MouseEvent) => {
+      if (localStorage.getItem('sound_muted') === '1') return
       const target = e.target as HTMLElement
       if (target.closest('a, button')) playClick()
     }

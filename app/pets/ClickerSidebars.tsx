@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { loadData, saveData, getClicker, saveClicker, type PetPlayerData } from '@/lib/petStore'
-import { UPGRADES, computeStats, upgradeCost, formatMoedas, BUY_RATE, SELL_RATE } from '@/lib/clickerData'
-import { playClick, getClickerMuted, setClickerMuted } from '@/lib/sounds'
+import { UPGRADES, computeStats, upgradeCost, formatMoedas, computeExchange } from '@/lib/clickerData'
+import { playClick, getMuted, setMuted } from '@/lib/sounds'
 
 interface DiscordUser { id: string; username: string; avatar: string | null; globalName: string | null }
 
@@ -24,9 +24,9 @@ export default function ClickerSidebars({ initialUser }: { initialUser: DiscordU
   const [userData, setUserData]     = useState<PetPlayerData | null>(null)
   const [isFuryNext, setIsFuryNext] = useState(false)
   const [floatNums, setFloatNums]   = useState<{ id: number; text: string; isCrit: boolean }[]>([])
-  const [muted, setMuted]           = useState(false)
+  const [muted, setMutedState]      = useState(false)
 
-  useEffect(() => { setMuted(getClickerMuted()) }, [])
+  useEffect(() => { setMutedState(getMuted()) }, [])
 
   useEffect(() => {
     if (!initialUser) return
@@ -146,22 +146,24 @@ export default function ClickerSidebars({ initialUser }: { initialUser: DiscordU
   }
 
   function buyMoedas() {
-    if (!userData || userData.points < BUY_RATE.pts) return
+    const ex = computeExchange(computeStats(upgradesRef.current).mps * computeStats(upgradesRef.current).multiplier)
+    if (!userData || userData.points < ex.buy.pts) return
     playClick()
-    const updated = { ...userData, points: userData.points - BUY_RATE.pts }
-    moedasRef.current      += BUY_RATE.moedas
-    totalEarnedRef.current += BUY_RATE.moedas
+    const updated = { ...userData, points: userData.points - ex.buy.pts }
+    moedasRef.current      += ex.buy.moedas
+    totalEarnedRef.current += ex.buy.moedas
     setMoedas(Math.floor(moedasRef.current))
     const withClicker = saveClicker(updated, { moedas: moedasRef.current, totalMoedasEarned: totalEarnedRef.current, upgrades: upgradesRef.current, lastTickAt: Date.now() })
     saveData(withClicker); setUserData(withClicker)
   }
 
   function sellMoedas() {
-    if (!userData || moedasRef.current < SELL_RATE.moedas) return
+    const ex = computeExchange(computeStats(upgradesRef.current).mps * computeStats(upgradesRef.current).multiplier)
+    if (!userData || moedasRef.current < ex.sell.moedas) return
     playClick()
-    moedasRef.current -= SELL_RATE.moedas
+    moedasRef.current -= ex.sell.moedas
     setMoedas(Math.floor(moedasRef.current))
-    const updated = { ...userData, points: userData.points + SELL_RATE.pts, totalPoints: userData.totalPoints + SELL_RATE.pts }
+    const updated = { ...userData, points: userData.points + ex.sell.pts, totalPoints: userData.totalPoints + ex.sell.pts }
     const withClicker = saveClicker(updated, { moedas: moedasRef.current, totalMoedasEarned: totalEarnedRef.current, upgrades: upgradesRef.current, lastTickAt: Date.now() })
     saveData(withClicker); setUserData(withClicker)
   }
@@ -169,6 +171,7 @@ export default function ClickerSidebars({ initialUser }: { initialUser: DiscordU
   if (!initialUser || !userData) return null
 
   const stats     = computeStats(upgrades)
+  const ex        = computeExchange(stats.mps * stats.multiplier)
   const furyEvery = stats.furyEvery
   const furyCount = furyCountRef.current
 
@@ -188,7 +191,7 @@ export default function ClickerSidebars({ initialUser }: { initialUser: DiscordU
         {/* Counter */}
         <div className="bg-zinc-900/90 backdrop-blur border border-zinc-700 rounded-2xl p-4 text-center relative">
           <button
-            onClick={() => { const v = !muted; setMuted(v); setClickerMuted(v) }}
+            onClick={() => { const v = !muted; setMutedState(v); setMuted(v) }}
             title={muted ? 'Ativar som' : 'Silenciar clicker'}
             className="absolute top-2 right-2 text-base leading-none text-zinc-500 hover:text-zinc-300 transition-colors"
           >{muted ? '🔇' : '🔊'}</button>
@@ -252,13 +255,13 @@ export default function ClickerSidebars({ initialUser }: { initialUser: DiscordU
         {/* Exchange */}
         <div className="bg-zinc-900/90 backdrop-blur border border-zinc-700 rounded-2xl p-3 space-y-2">
           <p className="text-zinc-400 text-[11px] font-bold uppercase tracking-wider">Câmbio</p>
-          <button onClick={buyMoedas} disabled={userData.points < BUY_RATE.pts}
+          <button onClick={buyMoedas} disabled={userData.points < ex.buy.pts}
             className="w-full py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-30 disabled:cursor-not-allowed text-white text-[11px] font-bold rounded-lg transition-all">
-            {BUY_RATE.pts} pts → +{formatMoedas(BUY_RATE.moedas)}M
+            {ex.buy.pts} pts → +{formatMoedas(ex.buy.moedas)}
           </button>
-          <button onClick={sellMoedas} disabled={moedas < SELL_RATE.moedas}
+          <button onClick={sellMoedas} disabled={moedas < ex.sell.moedas}
             className="w-full py-1.5 bg-green-700 hover:bg-green-600 disabled:opacity-30 disabled:cursor-not-allowed text-white text-[11px] font-bold rounded-lg transition-all">
-            {formatMoedas(SELL_RATE.moedas)}M → +{SELL_RATE.pts} pts
+            {formatMoedas(ex.sell.moedas)} → +{ex.sell.pts} pts
           </button>
           <p className="text-zinc-600 text-[10px] text-center">Pts disponíveis: {userData.points}</p>
         </div>

@@ -4,16 +4,19 @@
 
 let ctx: AudioContext | null = null
 
-// ── Clicker mute ────────────────────────────────────────────────────────────
-let _clickerMuted = false
+// ── Mute global (afeta todos os sons do site) ───────────────────────────────
+let _muted = false
 if (typeof window !== 'undefined') {
-  _clickerMuted = localStorage.getItem('clicker_muted') === '1'
+  _muted = localStorage.getItem('sound_muted') === '1'
 }
-export function getClickerMuted(): boolean { return _clickerMuted }
-export function setClickerMuted(v: boolean) {
-  _clickerMuted = v
-  if (typeof window !== 'undefined') localStorage.setItem('clicker_muted', v ? '1' : '0')
+export function getMuted(): boolean { return _muted }
+export function setMuted(v: boolean) {
+  _muted = v
+  if (typeof window !== 'undefined') localStorage.setItem('sound_muted', v ? '1' : '0')
 }
+// Aliases mantidos para não quebrar imports antigos
+export const getClickerMuted = getMuted
+export const setClickerMuted = setMuted
 
 function getCtx(): AudioContext | null {
   if (typeof window === 'undefined') return null
@@ -23,6 +26,7 @@ function getCtx(): AudioContext | null {
 }
 
 function playTone(freq: number, duration: number, type: OscillatorType = 'sine', vol = 0.3) {
+  if (_muted) return
   const c = getCtx(); if (!c) return
   const osc = c.createOscillator()
   const gain = c.createGain()
@@ -46,7 +50,6 @@ function playSequence(notes: { freq: number; start: number; dur: number }[], typ
 }
 
 export function playClick() {
-  if (_clickerMuted) return
   playTone(600, 0.06, 'square', 0.15)
 }
 

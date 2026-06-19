@@ -8,10 +8,10 @@ import {
 } from '@/lib/petStore'
 import {
   UPGRADES, computeStats, upgradeCost, upgradeEffectText, formatMoedas,
-  BUY_RATE, SELL_RATE,
+  computeExchange,
   type UpgradeDef,
 } from '@/lib/clickerData'
-import { playClick, getClickerMuted, setClickerMuted } from '@/lib/sounds'
+import { playClick, getMuted, setMuted } from '@/lib/sounds'
 
 interface DiscordUser { id: string; username: string; avatar: string | null; globalName: string | null }
 
@@ -43,9 +43,9 @@ export default function ClickerGame({ initialUser }: { initialUser: DiscordUser 
   const [floatNums, setFloatNums]     = useState<FloatNum[]>([])
   const [isFuryNext, setIsFuryNext]   = useState(false)
   const [offlineGain, setOfflineGain] = useState<number | null>(null)
-  const [muted, setMuted]             = useState(false)
+  const [muted, setMutedState]        = useState(false)
 
-  useEffect(() => { setMuted(getClickerMuted()) }, [])
+  useEffect(() => { setMutedState(getMuted()) }, [])
 
   // Load data on mount
   useEffect(() => {
@@ -236,11 +236,12 @@ export default function ClickerGame({ initialUser }: { initialUser: DiscordUser 
 
   function buyMoedas() {
     if (!userData) return
-    if (userData.points < BUY_RATE.pts) return
+    const ex = computeExchange(computeStats(upgradesRef.current).mps * computeStats(upgradesRef.current).multiplier)
+    if (userData.points < ex.buy.pts) return
     playClick()
-    const updated = { ...userData, points: userData.points - BUY_RATE.pts }
-    moedasRef.current      += BUY_RATE.moedas
-    totalEarnedRef.current += BUY_RATE.moedas
+    const updated = { ...userData, points: userData.points - ex.buy.pts }
+    moedasRef.current      += ex.buy.moedas
+    totalEarnedRef.current += ex.buy.moedas
     setMoedas(Math.floor(moedasRef.current))
     const withClicker = saveClicker(updated, {
       moedas: moedasRef.current,
@@ -254,14 +255,15 @@ export default function ClickerGame({ initialUser }: { initialUser: DiscordUser 
 
   function sellMoedas() {
     if (!userData) return
-    if (moedasRef.current < SELL_RATE.moedas) return
+    const ex = computeExchange(computeStats(upgradesRef.current).mps * computeStats(upgradesRef.current).multiplier)
+    if (moedasRef.current < ex.sell.moedas) return
     playClick()
-    moedasRef.current -= SELL_RATE.moedas
+    moedasRef.current -= ex.sell.moedas
     setMoedas(Math.floor(moedasRef.current))
     const updated = {
       ...userData,
-      points: userData.points + SELL_RATE.pts,
-      totalPoints: userData.totalPoints + SELL_RATE.pts,
+      points: userData.points + ex.sell.pts,
+      totalPoints: userData.totalPoints + ex.sell.pts,
     }
     const withClicker = saveClicker(updated, {
       moedas: moedasRef.current,
@@ -292,11 +294,12 @@ export default function ClickerGame({ initialUser }: { initialUser: DiscordUser 
   }
 
   const stats = computeStats(upgrades)
+  const ex    = computeExchange(stats.mps * stats.multiplier)
   const furyUpg = upgrades['fury'] ?? 0
   const furyEvery = stats.furyEvery
   const furyCount = furyCountRef.current
-  const canBuyMoedas  = userData.points >= BUY_RATE.pts
-  const canSellMoedas = moedas >= SELL_RATE.moedas
+  const canBuyMoedas  = userData.points >= ex.buy.pts
+  const canSellMoedas = moedas >= ex.sell.moedas
 
   // Group upgrades
   const clickUpgrades    = UPGRADES.filter(u => u.type === 'click' || u.type === 'click_modifier' || u.type === 'fury' || u.type === 'auto_click')
@@ -330,7 +333,7 @@ export default function ClickerGame({ initialUser }: { initialUser: DiscordUser 
         </Link>
         <h1 className="text-xl font-bold text-white flex-1">🪙 Fábrica de Moedas</h1>
         <button
-          onClick={() => { const v = !muted; setMuted(v); setClickerMuted(v) }}
+          onClick={() => { const v = !muted; setMutedState(v); setMuted(v) }}
           title={muted ? 'Ativar som' : 'Silenciar clicker'}
           className="text-xl text-zinc-400 hover:text-zinc-200 transition-colors"
         >{muted ? '🔇' : '🔊'}</button>
@@ -397,24 +400,24 @@ export default function ClickerGame({ initialUser }: { initialUser: DiscordUser 
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-zinc-800/60 border border-zinc-700 rounded-xl p-4 space-y-2">
           <p className="text-xs font-bold text-zinc-300">Converter Pontos → 🪙</p>
-          <p className="text-zinc-500 text-xs">{BUY_RATE.pts} pts = {formatMoedas(BUY_RATE.moedas)} moedas</p>
+          <p className="text-zinc-500 text-xs">{ex.buy.pts} pts = {formatMoedas(ex.buy.moedas)} moedas</p>
           <button
             onClick={buyMoedas}
             disabled={!canBuyMoedas}
             className="w-full py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold rounded-lg transition-all"
           >
-            {BUY_RATE.pts} pts → +{formatMoedas(BUY_RATE.moedas)}
+            {ex.buy.pts} pts → +{formatMoedas(ex.buy.moedas)}
           </button>
         </div>
         <div className="bg-zinc-800/60 border border-zinc-700 rounded-xl p-4 space-y-2">
           <p className="text-xs font-bold text-zinc-300">Converter 🪙 → Pontos</p>
-          <p className="text-zinc-500 text-xs">{formatMoedas(SELL_RATE.moedas)} moedas = {SELL_RATE.pts} pts</p>
+          <p className="text-zinc-500 text-xs">{formatMoedas(ex.sell.moedas)} moedas = {ex.sell.pts} pts</p>
           <button
             onClick={sellMoedas}
             disabled={!canSellMoedas}
             className="w-full py-2 bg-green-700 hover:bg-green-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold rounded-lg transition-all"
           >
-            {formatMoedas(SELL_RATE.moedas)} → +{SELL_RATE.pts} pts
+            {formatMoedas(ex.sell.moedas)} → +{ex.sell.pts} pts
           </button>
         </div>
       </div>
