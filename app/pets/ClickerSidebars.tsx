@@ -183,7 +183,7 @@ export default function ClickerSidebars({ initialUser }: { initialUser: DiscordU
       `}</style>
 
       {/* ── LEFT SIDEBAR ─────────────────────────────────────────────── */}
-      <div className="hidden xl:flex fixed left-4 top-[52px] w-52 flex-col gap-3 z-20">
+      <div className="hidden xl:flex fixed left-4 top-1/2 -translate-y-1/2 w-52 flex-col gap-3 z-20">
 
         {/* Counter */}
         <div className="bg-zinc-900/90 backdrop-blur border border-zinc-700 rounded-2xl p-4 text-center relative">
