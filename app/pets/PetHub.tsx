@@ -445,7 +445,7 @@ export default function PetHub({ initialUser, vipTier = 0 }: { initialUser: Disc
       )}
 
       {/* Mini-games e Cápsula */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <Link href="/pets/capsula" onClick={playClick}
           className="flex items-center gap-3 bg-yellow-900/20 border border-yellow-500/40 hover:border-yellow-400 rounded-xl p-4 transition-all hover:scale-105">
           <span className="text-3xl">🎰</span>
@@ -460,6 +460,14 @@ export default function PetHub({ initialUser, vipTier = 0 }: { initialUser: Disc
           <div>
             <p className="text-green-400 font-bold text-sm">Mini-games</p>
             <p className="text-zinc-500 text-xs">Ganhe pontos</p>
+          </div>
+        </Link>
+        <Link href="/pets/clicker" onClick={playClick}
+          className="flex items-center gap-3 bg-amber-900/20 border border-amber-500/40 hover:border-amber-400 rounded-xl p-4 transition-all hover:scale-105">
+          <span className="text-3xl">🪙</span>
+          <div>
+            <p className="text-amber-400 font-bold text-sm">Fábrica</p>
+            <p className="text-zinc-500 text-xs">Idle clicker</p>
           </div>
         </Link>
       </div>

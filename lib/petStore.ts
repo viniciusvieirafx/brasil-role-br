@@ -57,6 +57,13 @@ export interface BattleLimitEntry {
   windowStart: number  // timestamp do início da janela
 }
 
+export interface ClickerState {
+  moedas: number
+  totalMoedasEarned: number
+  upgrades: Record<string, number>
+  lastTickAt: number
+}
+
 export interface PetPlayerData {
   discordId: string
   hasStarted: boolean
@@ -70,6 +77,7 @@ export interface PetPlayerData {
   highScore: number
   notifications: PetNotification[]
   battleLimits: Record<string, BattleLimitEntry>  // chave = discordId do oponente
+  clicker?: ClickerState
   updatedAt?: number             // timestamp do último saveData — usado para resolver race condition servidor vs local
 }
 
@@ -270,6 +278,14 @@ export function openCapsule(data: PetPlayerData, vipTier = 0): { data: PetPlayer
 export function addXpBoostToActivePet(data: PetPlayerData, xp: number): PetPlayerData {
   if (!data.activePetId) return data
   return addXpToPet(data, data.activePetId, xp)
+}
+
+export function getClicker(data: PetPlayerData): ClickerState {
+  return data.clicker ?? { moedas: 0, totalMoedasEarned: 0, upgrades: {}, lastTickAt: Date.now() }
+}
+
+export function saveClicker(data: PetPlayerData, clicker: ClickerState): PetPlayerData {
+  return { ...data, clicker }
 }
 
 export const MAX_LIVES = 3

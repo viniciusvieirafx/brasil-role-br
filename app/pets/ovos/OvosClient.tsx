@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import PetSprite from '@/components/pets/PetSprite'
 import {
   loadData, saveData, startIncubation, checkHatch, addPet, setActivePet,
-  incubationProgress, incubationSecondsLeft,
+  incubationProgress, incubationSecondsLeft, addXpBoostToActivePet,
   type PetPlayerData,
 } from '@/lib/petStore'
 import { EGG_DB, getPet, RARITY_STYLE, ELEMENT_EMOJI, ELEMENT_COLOR, ELEMENTS, type Rarity, type Element } from '@/lib/petData'
@@ -16,6 +16,10 @@ interface DiscordUser { id: string; username: string; avatar: string | null; glo
 
 const EGG_EMOJI: Record<Rarity, string> = {
   'Comum':'🥚', 'Incomum':'🟢', 'Raro':'🔵', 'Épico':'🟣', 'Lendário':'🌟',
+}
+
+const EGG_XP: Record<Rarity, number> = {
+  'Comum': 15, 'Incomum': 60, 'Raro': 150, 'Épico': 400, 'Lendário': 1000,
 }
 
 type ModalState =
@@ -32,6 +36,7 @@ export default function OvosClient({ initialUser }: { initialUser: DiscordUser |
   const [hatchName, setHatchName] = useState('')
   const [pendingHatch, setPendingHatch] = useState<{ data: PetPlayerData; petId: number; element: Element } | null>(null)
   const [confirmRemove, setConfirmRemove] = useState(false)
+  const [confirmDestroyId, setConfirmDestroyId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!initialUser) return
@@ -80,6 +85,19 @@ export default function OvosClient({ initialUser }: { initialUser: DiscordUser |
     const updated = startIncubation(data, eggId)
     saveData(updated)
     setData(updated)
+  }
+
+  function handleDestroyEgg(eggInstanceId: string) {
+    if (!initialUser || !data) return
+    playClick()
+    const egg = data.ownedEggs.find(e => e.instanceId === eggInstanceId)
+    if (!egg) return
+    const xp = EGG_XP[egg.type]
+    let updated: PetPlayerData = { ...data, ownedEggs: data.ownedEggs.filter(e => e.instanceId !== eggInstanceId) }
+    updated = addXpBoostToActivePet(updated, xp)
+    saveData(updated)
+    setData(updated)
+    setConfirmDestroyId(null)
   }
 
   function handleRemoveFromIncubator() {
@@ -196,18 +214,43 @@ export default function OvosClient({ initialUser }: { initialUser: DiscordUser |
             {data.ownedEggs.map(egg => {
               const def = EGG_DB.find(e => e.type === egg.type)!
               const style = RARITY_STYLE[egg.type]
+              const isConfirming = confirmDestroyId === egg.instanceId
               return (
-                <div key={egg.instanceId} className={`rounded-xl border ${style.border} ${style.bg} p-4 flex items-center gap-3`}>
-                  <span className="text-3xl">{EGG_EMOJI[egg.type]}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className={`font-medium text-sm ${style.text}`}>{def.label}</p>
-                    <p className="text-zinc-500 text-xs">{formatTimeLeft(def.incubationSeconds)}</p>
-                  </div>
-                  <button onClick={() => handleSendToIncubator(egg.instanceId)}
-                    disabled={!!data.incubating}
-                    className="px-3 py-1.5 bg-yellow-400 hover:bg-yellow-300 disabled:opacity-40 disabled:cursor-not-allowed text-black text-xs font-bold rounded-lg transition-all">
-                    Incubar
-                  </button>
+                <div key={egg.instanceId} className={`rounded-xl border ${style.border} ${style.bg} p-4`}>
+                  {!isConfirming ? (
+                    <div className="flex items-center gap-3">
+                      <span className="text-3xl">{EGG_EMOJI[egg.type]}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className={`font-medium text-sm ${style.text}`}>{def.label}</p>
+                        <p className="text-zinc-500 text-xs">{formatTimeLeft(def.incubationSeconds)}</p>
+                      </div>
+                      <button onClick={() => handleSendToIncubator(egg.instanceId)}
+                        disabled={!!data.incubating}
+                        className="px-3 py-1.5 bg-yellow-400 hover:bg-yellow-300 disabled:opacity-40 disabled:cursor-not-allowed text-black text-xs font-bold rounded-lg transition-all">
+                        Incubar
+                      </button>
+                      <button
+                        onClick={() => { playClick(); setConfirmDestroyId(egg.instanceId) }}
+                        title="Destruir ovo por XP"
+                        className="p-1.5 text-zinc-500 hover:text-red-400 transition-colors text-base leading-none">
+                        🗑
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-zinc-400 flex-1">
+                        Destruir por <span className="text-yellow-400 font-bold">+{EGG_XP[egg.type]} XP</span>?
+                      </span>
+                      <button onClick={() => handleDestroyEgg(egg.instanceId)}
+                        className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-lg transition-all">
+                        Sim
+                      </button>
+                      <button onClick={() => { playClick(); setConfirmDestroyId(null) }}
+                        className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-white text-xs rounded-lg transition-all">
+                        Não
+                      </button>
+                    </div>
+                  )}
                 </div>
               )
             })}
