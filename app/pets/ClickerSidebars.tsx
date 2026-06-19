@@ -193,7 +193,7 @@ export default function ClickerSidebars({ initialUser }: { initialUser: DiscordU
         </div>
 
         {/* Click button */}
-        <div className="flex flex-col items-center gap-2">
+        <div className="flex flex-col items-center gap-2 w-full">
           <div className="relative">
             <button
               onClick={() => { playClick(); doClick() }}
