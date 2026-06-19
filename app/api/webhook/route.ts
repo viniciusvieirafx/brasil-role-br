@@ -81,18 +81,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
-  // external_reference = "discord-{userId}"
+  // external_reference = "discord-{userId}-t{tier}" (novo) ou "discord-{userId}" (legado)
   const ref: string = payment.external_reference ?? ''
-  const match = ref.match(/^discord-(\d+)$/)
+  const match = ref.match(/^discord-(\d+)(?:-t(\d+))?$/)
   if (!match) {
     return NextResponse.json({ ok: true })
   }
 
   const discordUserId = match[1]
-
-  // Detecta tier pelo external_reference (novo: discord-{id}-t{tier}, legado: discord-{id})
-  const tierMatch = ref.match(/-t(\d+)$/)
-  const tier = tierMatch ? parseInt(tierMatch[1]) : 1
+  const tier = match[2] ? parseInt(match[2]) : 1
 
   const roleByTier: Record<number, string | undefined> = {
     1: process.env.DISCORD_VIP_ROLE_ID,
