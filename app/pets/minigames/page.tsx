@@ -25,6 +25,46 @@ const GAMES = [
     color: 'border-green-500/50 hover:border-green-400 bg-green-900/10',
     reward: 'recorde de distância',
   },
+  {
+    href: '/pets/minigames/pesca',
+    icon: '🎣',
+    title: 'Pesca',
+    desc: 'Fique atento ao flutuador e toque rápido quando o peixe morder!',
+    color: 'border-cyan-500/50 hover:border-cyan-400 bg-cyan-900/10',
+    reward: '+pontos +saciedade',
+  },
+  {
+    href: '/pets/minigames/danca',
+    icon: '🎵',
+    title: 'Dança',
+    desc: 'Memorize e repita sequências de setas. Cada rodada fica mais longa!',
+    color: 'border-pink-500/50 hover:border-pink-400 bg-pink-900/10',
+    reward: '+pontos +XP',
+  },
+  {
+    href: '/pets/minigames/sonho',
+    icon: '💤',
+    title: 'Sonho',
+    desc: 'Proteja o bichinho dormindo! Afaste os pesadelos antes que cheguem!',
+    color: 'border-violet-500/50 hover:border-violet-400 bg-violet-900/10',
+    reward: '+pontos',
+  },
+  {
+    href: '/pets/minigames/treino',
+    icon: '💪',
+    title: 'Treino',
+    desc: 'Toque no momento certo para completar as reps! Fica mais difícil...',
+    color: 'border-yellow-500/50 hover:border-yellow-400 bg-yellow-900/10',
+    reward: '+pontos +XP',
+  },
+  {
+    href: '/pets/minigames/memoria',
+    icon: '🃏',
+    title: 'Memória',
+    desc: 'Encontre todos os pares de cartas. Quanto mais rápido, mais pontos!',
+    color: 'border-indigo-500/50 hover:border-indigo-400 bg-indigo-900/10',
+    reward: '+pontos',
+  },
 ]
 
 export default function MinigamesPage() {
