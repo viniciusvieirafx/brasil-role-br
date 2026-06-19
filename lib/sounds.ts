@@ -4,6 +4,17 @@
 
 let ctx: AudioContext | null = null
 
+// ── Clicker mute ────────────────────────────────────────────────────────────
+let _clickerMuted = false
+if (typeof window !== 'undefined') {
+  _clickerMuted = localStorage.getItem('clicker_muted') === '1'
+}
+export function getClickerMuted(): boolean { return _clickerMuted }
+export function setClickerMuted(v: boolean) {
+  _clickerMuted = v
+  if (typeof window !== 'undefined') localStorage.setItem('clicker_muted', v ? '1' : '0')
+}
+
 function getCtx(): AudioContext | null {
   if (typeof window === 'undefined') return null
   if (!ctx) ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
@@ -35,6 +46,7 @@ function playSequence(notes: { freq: number; start: number; dur: number }[], typ
 }
 
 export function playClick() {
+  if (_clickerMuted) return
   playTone(600, 0.06, 'square', 0.15)
 }
 

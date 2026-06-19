@@ -11,7 +11,7 @@ import {
   BUY_RATE, SELL_RATE,
   type UpgradeDef,
 } from '@/lib/clickerData'
-import { playClick } from '@/lib/sounds'
+import { playClick, getClickerMuted, setClickerMuted } from '@/lib/sounds'
 
 interface DiscordUser { id: string; username: string; avatar: string | null; globalName: string | null }
 
@@ -43,6 +43,9 @@ export default function ClickerGame({ initialUser }: { initialUser: DiscordUser 
   const [floatNums, setFloatNums]     = useState<FloatNum[]>([])
   const [isFuryNext, setIsFuryNext]   = useState(false)
   const [offlineGain, setOfflineGain] = useState<number | null>(null)
+  const [muted, setMuted]             = useState(false)
+
+  useEffect(() => { setMuted(getClickerMuted()) }, [])
 
   // Load data on mount
   useEffect(() => {
@@ -326,6 +329,11 @@ export default function ClickerGame({ initialUser }: { initialUser: DiscordUser 
           ← Voltar
         </Link>
         <h1 className="text-xl font-bold text-white flex-1">🪙 Fábrica de Moedas</h1>
+        <button
+          onClick={() => { const v = !muted; setMuted(v); setClickerMuted(v) }}
+          title={muted ? 'Ativar som' : 'Silenciar clicker'}
+          className="text-xl text-zinc-400 hover:text-zinc-200 transition-colors"
+        >{muted ? '🔇' : '🔊'}</button>
         <div className="flex items-center gap-2 bg-yellow-400/10 border border-yellow-400/30 rounded-xl px-3 py-1.5">
           <span className="text-yellow-400 font-bold">{userData.points}</span>
           <span className="text-zinc-400 text-xs">pts</span>

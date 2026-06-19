@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { loadData, saveData, getClicker, saveClicker, type PetPlayerData } from '@/lib/petStore'
 import { UPGRADES, computeStats, upgradeCost, formatMoedas, BUY_RATE, SELL_RATE } from '@/lib/clickerData'
-import { playClick } from '@/lib/sounds'
+import { playClick, getClickerMuted, setClickerMuted } from '@/lib/sounds'
 
 interface DiscordUser { id: string; username: string; avatar: string | null; globalName: string | null }
 
@@ -24,6 +24,9 @@ export default function ClickerSidebars({ initialUser }: { initialUser: DiscordU
   const [userData, setUserData]     = useState<PetPlayerData | null>(null)
   const [isFuryNext, setIsFuryNext] = useState(false)
   const [floatNums, setFloatNums]   = useState<{ id: number; text: string; isCrit: boolean }[]>([])
+  const [muted, setMuted]           = useState(false)
+
+  useEffect(() => { setMuted(getClickerMuted()) }, [])
 
   useEffect(() => {
     if (!initialUser) return
@@ -180,10 +183,15 @@ export default function ClickerSidebars({ initialUser }: { initialUser: DiscordU
       `}</style>
 
       {/* ── LEFT SIDEBAR ─────────────────────────────────────────────── */}
-      <div className="hidden xl:flex fixed left-4 top-6 w-52 flex-col gap-3 z-20">
+      <div className="hidden xl:flex fixed left-4 top-[52px] w-52 flex-col gap-3 z-20">
 
         {/* Counter */}
-        <div className="bg-zinc-900/90 backdrop-blur border border-zinc-700 rounded-2xl p-4 text-center">
+        <div className="bg-zinc-900/90 backdrop-blur border border-zinc-700 rounded-2xl p-4 text-center relative">
+          <button
+            onClick={() => { const v = !muted; setMuted(v); setClickerMuted(v) }}
+            title={muted ? 'Ativar som' : 'Silenciar clicker'}
+            className="absolute top-2 right-2 text-base leading-none text-zinc-500 hover:text-zinc-300 transition-colors"
+          >{muted ? '🔇' : '🔊'}</button>
           <p className="text-yellow-400 text-3xl font-black tabular-nums leading-none">{formatMoedas(moedas)}</p>
           <p className="text-zinc-500 text-[11px] mt-0.5">moedas</p>
           <div className="flex justify-center gap-4 mt-2 text-[11px] text-zinc-400">
@@ -238,7 +246,7 @@ export default function ClickerSidebars({ initialUser }: { initialUser: DiscordU
       </div>
 
       {/* ── RIGHT SIDEBAR ────────────────────────────────────────────── */}
-      <div className="hidden xl:flex fixed right-4 top-6 w-56 flex-col gap-3 z-20 max-h-[calc(100vh-2rem)] overflow-y-auto pb-4"
+      <div className="hidden xl:flex fixed right-4 top-[52px] w-56 flex-col gap-3 z-20 max-h-[calc(100vh-52px)] overflow-y-auto pb-4"
         style={{ scrollbarWidth: 'thin', scrollbarColor: '#3f3f46 transparent' }}>
 
         {/* Exchange */}
