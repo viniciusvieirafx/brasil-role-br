@@ -177,7 +177,9 @@ export default function PetHub({ initialUser, vipTier = 0 }: { initialUser: Disc
     if (!initialUser) return
     // Carrega localStorage imediatamente (sem delay)
     const { data: local } = updateActivePetFull(loadData(initialUser.id))
-    saveData(local)
+    // Só salva no servidor se tiver dados reais — evita sobrescrever dados do servidor
+    // com localStorage vazio quando o usuário entra de um dispositivo novo
+    if (local.hasStarted) saveData(local)
     setData(local)
     setActivePetObj(local.activePetId ? (local.ownedPets.find(p => p.instanceId === local.activePetId) ?? null) : null)
     // Depois tenta sincronizar com o servidor (cross-device)
