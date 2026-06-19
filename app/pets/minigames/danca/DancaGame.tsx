@@ -184,7 +184,7 @@ export default function DancaGame({ initialUser }: { initialUser: DiscordUser | 
 
   const steps = [
     { emoji: '🎯', title: 'Objetivo',       desc: 'Memorize e repita sequências de setas. Cada rodada fica mais longa!' },
-    { emoji: '👀', title: 'Observe',        desc: 'Na fase "Memorize...", preste atenção nos botões que acendem em sequência.' },
+    { emoji: '👀', title: 'Observe',        desc: 'Na fase "Memorize...", os botões acendem um a um. Grave a ordem na memória — não aparece depois!' },
     { emoji: '🕹️', title: 'Repita',         desc: 'Na fase "Sua vez!", pressione os botões na mesma ordem. Use as setas do teclado também!' },
     { emoji: '❤️', title: 'Vidas',          desc: 'Você tem 3 vidas. Cada erro custa uma vida.' },
     { emoji: '📈', title: 'Dificuldade',    desc: 'A cada rodada completada, mais uma seta é adicionada à sequência.' },
@@ -219,18 +219,18 @@ export default function DancaGame({ initialUser }: { initialUser: DiscordUser | 
 
       {(phase === 'show' || phase === 'input' || phase === 'feedback_ok' || phase === 'feedback_fail') && (
         <div className="space-y-6">
-          {/* Sequence display */}
-          <div className="bg-zinc-800 rounded-2xl p-4 min-h-[60px] flex flex-wrap gap-2 items-center justify-center">
-            {sequence.map((dir, i) => {
-              let cls = 'text-zinc-600 text-xl'
-              if (phase === 'show' && i === showIdx) cls = 'text-white text-xl scale-125'
-              else if (phase === 'input' && i < inputIdx) cls = 'text-green-400 text-xl'
-              return (
-                <span key={i} className={`transition-all ${cls}`}>
-                  {DIR_EMOJI[dir]}
-                </span>
-              )
-            })}
+          {/* Progress dots — só mostra quantidade, não as direções */}
+          <div className="bg-zinc-800 rounded-2xl p-4 min-h-[60px] flex flex-col items-center justify-center gap-2">
+            <div className="flex gap-2">
+              {sequence.map((_, i) => (
+                <span key={i} className={`w-3 h-3 rounded-full transition-all ${
+                  phase === 'input' && i < inputIdx ? 'bg-green-400' :
+                  phase === 'show' && i === showIdx ? 'bg-white scale-125' :
+                  'bg-zinc-600'
+                }`} />
+              ))}
+            </div>
+            <span className="text-zinc-500 text-xs">{sequence.length} movimento{sequence.length !== 1 ? 's' : ''}</span>
           </div>
 
           {/* Status message */}
