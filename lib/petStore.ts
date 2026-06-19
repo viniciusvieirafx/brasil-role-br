@@ -70,6 +70,7 @@ export interface PetPlayerData {
   highScore: number
   notifications: PetNotification[]
   battleLimits: Record<string, BattleLimitEntry>  // chave = discordId do oponente
+  updatedAt?: number             // timestamp do último saveData — usado para resolver race condition servidor vs local
 }
 
 const KEY = (id: string) => `pet_data_${id}`
@@ -102,9 +103,10 @@ export function loadData(discordId: string): PetPlayerData {
 
 export function saveData(data: PetPlayerData) {
   if (typeof window === 'undefined') return
-  localStorage.setItem(KEY(data.discordId), JSON.stringify(data))
+  const stamped = { ...data, updatedAt: Date.now() }
+  localStorage.setItem(KEY(data.discordId), JSON.stringify(stamped))
   // Sincroniza com servidor de forma assíncrona
-  syncToServer(data).catch(() => {})
+  syncToServer(stamped).catch(() => {})
 }
 
 export async function syncToServer(data: PetPlayerData): Promise<void> {
@@ -258,6 +260,8 @@ export function openCapsule(data: PetPlayerData, vipTier = 0): { data: PetPlayer
       receivedAt: Date.now(),
     }
     newData = { ...newData, ownedEggs: [...newData.ownedEggs, egg] }
+  } else if (reward.type === 'xp_boost' && reward.xpAmount) {
+    newData = addXpBoostToActivePet(newData, reward.xpAmount)
   }
 
   return { data: newData, reward }
