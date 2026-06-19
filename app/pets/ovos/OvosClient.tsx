@@ -31,6 +31,7 @@ export default function OvosClient({ initialUser }: { initialUser: DiscordUser |
   const [modal, setModal] = useState<ModalState>(null)
   const [hatchName, setHatchName] = useState('')
   const [pendingHatch, setPendingHatch] = useState<{ data: PetPlayerData; petId: number; element: Element } | null>(null)
+  const [confirmRemove, setConfirmRemove] = useState(false)
 
   useEffect(() => {
     if (!initialUser) return
@@ -79,6 +80,21 @@ export default function OvosClient({ initialUser }: { initialUser: DiscordUser |
     const updated = startIncubation(data, eggId)
     saveData(updated)
     setData(updated)
+  }
+
+  function handleRemoveFromIncubator() {
+    if (!data?.incubating || !initialUser) return
+    playClick()
+    const updated: PetPlayerData = {
+      ...data,
+      ownedEggs: [...data.ownedEggs, data.incubating.egg],
+      incubating: null,
+    }
+    saveData(updated)
+    setData(updated)
+    setProgress(0)
+    setSecsLeft(0)
+    setConfirmRemove(false)
   }
 
   function handleConfirmName() {
@@ -135,6 +151,26 @@ export default function OvosClient({ initialUser }: { initialUser: DiscordUser |
                 style={{ width:`${Math.round(progress * 100)}%` }} />
             </div>
             <p className="text-right text-zinc-500 text-xs mt-1">{Math.round(progress * 100)}%</p>
+
+            {!confirmRemove ? (
+              <button
+                onClick={() => { playClick(); setConfirmRemove(true) }}
+                className="mt-3 w-full py-1.5 text-xs text-zinc-400 hover:text-red-400 border border-zinc-700 hover:border-red-700 rounded-lg transition-all">
+                Remover da incubadora
+              </button>
+            ) : (
+              <div className="mt-3 flex items-center gap-2">
+                <span className="text-xs text-zinc-400 flex-1">Perderá o progresso. Continuar?</span>
+                <button onClick={handleRemoveFromIncubator}
+                  className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-lg transition-all">
+                  Sim
+                </button>
+                <button onClick={() => { playClick(); setConfirmRemove(false) }}
+                  className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-white text-xs rounded-lg transition-all">
+                  Não
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="rounded-2xl border-2 border-dashed border-zinc-700 p-6 text-center text-zinc-500">

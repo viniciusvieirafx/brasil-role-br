@@ -36,6 +36,7 @@ export default function PescaGame({ initialUser }: { initialUser: DiscordUser | 
   const bobberJiggleRef = useRef(0) // sine wave phase
   const biteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const rafRef = useRef(0)
+  const lastFrameRef = useRef(0)
   const lastSpawnRef = useRef(0)
   const lastSecRef = useRef(0)
 
@@ -59,7 +60,7 @@ export default function PescaGame({ initialUser }: { initialUser: DiscordUser | 
     }
   }
 
-  const draw = useCallback((now: number) => {
+  const draw = useCallback((now: number, dt: number) => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')!
@@ -91,21 +92,21 @@ export default function PescaGame({ initialUser }: { initialUser: DiscordUser | 
 
     // Update bobber jiggle
     if (activeBiteRef.current) {
-      bobberJiggleRef.current += 0.25
+      bobberJiggleRef.current += 0.25 * dt
     } else {
-      bobberJiggleRef.current += 0.04
+      bobberJiggleRef.current += 0.04 * dt
     }
 
     // Update fish positions & check bite trigger
     const toRemove = new Set<number>()
     for (const f of fishRef.current) {
       if (f.caught) {
-        f.floatAnim--
-        f.y -= 2
+        f.floatAnim -= dt
+        f.y -= 2 * dt
         if (f.floatAnim <= 0) toRemove.add(f.id)
         continue
       }
-      f.x += f.speedX
+      f.x += f.speedX * dt
       // Check if fish reached bobber x
       if (!activeBiteRef.current && Math.abs(f.x - BOBBER_X) < 15) {
         activeBiteRef.current = true
@@ -260,7 +261,10 @@ export default function PescaGame({ initialUser }: { initialUser: DiscordUser | 
 
   const loop = useCallback((now: number) => {
     if (!aliveRef.current) return
-    draw(now)
+    const delta = Math.min(now - lastFrameRef.current, 50)
+    lastFrameRef.current = now
+    const dt = delta / (1000 / 60)
+    draw(now, dt)
     rafRef.current = requestAnimationFrame(loop)
   }, [draw])
 
@@ -279,7 +283,7 @@ export default function PescaGame({ initialUser }: { initialUser: DiscordUser | 
     setScore(0)
     setTimeLeft(GAME_DURATION)
     setDisplayState('playing')
-    setTimeout(() => { rafRef.current = requestAnimationFrame(loop) }, 50)
+    setTimeout(() => { lastFrameRef.current = performance.now(); rafRef.current = requestAnimationFrame(loop) }, 50)
   }
 
   function handleCanvasTap() {

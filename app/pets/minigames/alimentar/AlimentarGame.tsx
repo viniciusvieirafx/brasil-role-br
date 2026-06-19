@@ -33,6 +33,7 @@ export default function AlimentarGame({ initialUser }: { initialUser: DiscordUse
   const hungerRef = useRef(0)
   const timeRef = useRef(GAME_DURATION)
   const rafRef = useRef(0)
+  const lastFrameRef = useRef(0)
   const aliveRef = useRef(false)
   const lastSpawnRef = useRef(0)
   const lastSecRef = useRef(0)
@@ -70,7 +71,7 @@ export default function AlimentarGame({ initialUser }: { initialUser: DiscordUse
     }
   }
 
-  const draw = useCallback((now: number) => {
+  const draw = useCallback((now: number, dt: number) => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')!
@@ -101,11 +102,11 @@ export default function AlimentarGame({ initialUser }: { initialUser: DiscordUse
     const toRemove = new Set<number>()
     for (const f of foodsRef.current) {
       if (f.caught) {
-        f.catchAnim--
+        f.catchAnim -= dt
         if (f.catchAnim <= 0) toRemove.add(f.id)
         continue
       }
-      f.y += f.speed
+      f.y += f.speed * dt
       if (f.y > H + FOOD_SIZE) {
         toRemove.add(f.id)
         livesRef.current = Math.max(0, livesRef.current - 1)
@@ -166,7 +167,10 @@ export default function AlimentarGame({ initialUser }: { initialUser: DiscordUse
 
   const loop = useCallback((now: number) => {
     if (!aliveRef.current) return
-    draw(now)
+    const delta = Math.min(now - lastFrameRef.current, 50)
+    lastFrameRef.current = now
+    const dt = delta / (1000 / 60)
+    draw(now, dt)
     rafRef.current = requestAnimationFrame(loop)
   }, [draw])
 
@@ -182,7 +186,7 @@ export default function AlimentarGame({ initialUser }: { initialUser: DiscordUse
     lastSecRef.current = 0
     aliveRef.current = true
     setScore(0); setLives(3); setTimeLeft(GAME_DURATION); setHunger(0); setDisplayState('playing')
-    setTimeout(() => { rafRef.current = requestAnimationFrame(loop) }, 50)
+    setTimeout(() => { lastFrameRef.current = performance.now(); rafRef.current = requestAnimationFrame(loop) }, 50)
   }
 
   // Click/tap on canvas → catch food

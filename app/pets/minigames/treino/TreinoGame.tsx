@@ -35,6 +35,7 @@ export default function TreinoGame({ initialUser }: { initialUser: DiscordUser |
   const timeRef = useRef(GAME_DURATION)
   const aliveRef = useRef(false)
   const rafRef = useRef(0)
+  const lastFrameRef = useRef(0)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const handleTapRef = useRef<(() => void) | null>(null)
@@ -59,10 +60,13 @@ export default function TreinoGame({ initialUser }: { initialUser: DiscordUser |
     }
   }
 
-  const animate = useCallback(() => {
+  const animate = useCallback((now: number) => {
     if (!aliveRef.current) return
+    const delta = Math.min(now - lastFrameRef.current, 50)
+    lastFrameRef.current = now
+    const dt = delta / (1000 / 60)
     const speed = getSpeed(repsRef.current)
-    barPosRef.current += dirRef.current * speed
+    barPosRef.current += dirRef.current * speed * dt
     if (barPosRef.current >= 100) { barPosRef.current = 100; dirRef.current = -1 }
     if (barPosRef.current <= 0) { barPosRef.current = 0; dirRef.current = 1 }
     setBarPos(Math.round(barPosRef.current))
@@ -83,7 +87,7 @@ export default function TreinoGame({ initialUser }: { initialUser: DiscordUser |
     setFlashMsg(null)
     setPhase('playing')
 
-    setTimeout(() => { rafRef.current = requestAnimationFrame(animate) }, 50)
+    setTimeout(() => { lastFrameRef.current = performance.now(); rafRef.current = requestAnimationFrame(animate) }, 50)
 
     timerRef.current = setInterval(() => {
       if (!aliveRef.current) return

@@ -65,6 +65,7 @@ export default function PuloGame({ initialUser }: { initialUser: DiscordUser | n
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const gsRef = useRef<GameState>(makeState())
   const rafRef = useRef(0)
+  const lastFrameRef = useRef(0)
   const petImgRef = useRef<HTMLImageElement | null>(null)
   const petImgWalkRef = useRef<HTMLImageElement | null>(null)
   const jumpPressedRef = useRef(false)   // evita repeat de keydown
@@ -180,13 +181,17 @@ export default function PuloGame({ initialUser }: { initialUser: DiscordUser | n
     ctx.fillText(`REC ${highScore}m`, W - 10, 10)
   }, [highScore])
 
-  const gameLoop = useCallback(() => {
+  const gameLoop = useCallback((now: number) => {
     const gs = gsRef.current
     if (!gs.alive) return
 
+    const delta = Math.min(now - lastFrameRef.current, 50)
+    lastFrameRef.current = now
+    const dt = delta / (1000 / 60)
+
     // ── Physics ──────────────────────────────────────────────────────────────
-    gs.vy += GRAVITY
-    gs.playerY += gs.vy
+    gs.vy += GRAVITY * dt
+    gs.playerY += gs.vy * dt
 
     if (gs.playerY >= GROUND_Y - PLAYER_H) {
       gs.playerY = GROUND_Y - PLAYER_H
@@ -198,22 +203,22 @@ export default function PuloGame({ initialUser }: { initialUser: DiscordUser | n
     }
 
     // ── Speed ramp ───────────────────────────────────────────────────────────
-    gs.score++
+    gs.score += dt
     gs.speed = 2.5 + Math.min(4, gs.score / 1200)
 
     // ── Spawn obstacle ───────────────────────────────────────────────────────
-    gs.nextObstacleIn--
+    gs.nextObstacleIn -= dt
     if (gs.nextObstacleIn <= 0) {
       const h = OBS_MIN_H + Math.random() * (OBS_MAX_H - OBS_MIN_H)
       const w = OBS_MIN_W + Math.random() * (OBS_MAX_W - OBS_MIN_W)
       gs.obstacles.push({ x: W + 10, w, h })
       const gap = OBS_MIN_GAP + Math.random() * (OBS_MAX_GAP - OBS_MIN_GAP)
-      gs.nextObstacleIn = Math.floor(gap / gs.speed)
+      gs.nextObstacleIn = gap / gs.speed
     }
 
     // ── Move + prune obstacles ────────────────────────────────────────────────
     gs.obstacles = gs.obstacles
-      .map(o => ({ ...o, x: o.x - gs.speed }))
+      .map(o => ({ ...o, x: o.x - gs.speed * dt }))
       .filter(o => o.x + o.w > -10)
 
     // ── Collision ────────────────────────────────────────────────────────────
@@ -249,9 +254,11 @@ export default function PuloGame({ initialUser }: { initialUser: DiscordUser | n
     cancelAnimationFrame(rafRef.current)
     gsRef.current = makeState()
     jumpPressedRef.current = false
+    lastFrameRef.current = 0
     setScore(0)
     setDisplayState('playing')
     setTimeout(() => {
+      lastFrameRef.current = performance.now()
       rafRef.current = requestAnimationFrame(gameLoop)
     }, 50)
   }
