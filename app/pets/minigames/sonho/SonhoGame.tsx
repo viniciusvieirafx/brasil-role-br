@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { loadData, saveData, addPoints } from '@/lib/petStore'
 import GameTutorial, { TutorialButton } from '@/components/pets/GameTutorial'
 import PetSprite from '@/components/pets/PetSprite'
@@ -23,6 +24,7 @@ interface Nightmare {
 let nextNightmareId = 0
 
 export default function SonhoGame({ initialUser }: { initialUser: DiscordUser | null }) {
+  const router = useRouter()
   const [phase, setPhase] = useState<'idle' | 'tutorial' | 'playing' | 'over'>('idle')
   const [nightmares, setNightmares] = useState<Nightmare[]>([])
   const [dreamHP, setDreamHP] = useState(100)
@@ -275,6 +277,10 @@ export default function SonhoGame({ initialUser }: { initialUser: DiscordUser | 
           <button onClick={startGame}
             className="px-8 py-3 bg-violet-500 hover:bg-violet-400 text-white font-bold rounded-xl transition-all hover:scale-105">
             Sonhar Novamente
+          </button>
+          <button onClick={() => router.push('/pets')}
+            className="px-8 py-3 bg-zinc-700 hover:bg-zinc-600 text-white font-bold rounded-xl transition-all hover:scale-105">
+            ← Ver meu bichinho
           </button>
         </div>
       )}

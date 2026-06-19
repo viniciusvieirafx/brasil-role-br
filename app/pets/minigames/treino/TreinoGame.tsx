@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { loadData, saveData, addPoints, addXpBoostToActivePet } from '@/lib/petStore'
 import GameTutorial, { TutorialButton } from '@/components/pets/GameTutorial'
 
@@ -21,6 +22,7 @@ function getSpeed(reps: number): number {
 }
 
 export default function TreinoGame({ initialUser }: { initialUser: DiscordUser | null }) {
+  const router = useRouter()
   const [phase, setPhase] = useState<'idle' | 'tutorial' | 'playing' | 'over'>('idle')
   const [barPos, setBarPos] = useState(0)
   const [reps, setReps] = useState(0)
@@ -248,6 +250,10 @@ export default function TreinoGame({ initialUser }: { initialUser: DiscordUser |
           <button onClick={startGame}
             className="px-8 py-3 bg-yellow-500 hover:bg-yellow-400 text-white font-bold rounded-xl transition-all hover:scale-105">
             Treinar Novamente
+          </button>
+          <button onClick={() => router.push('/pets')}
+            className="px-8 py-3 bg-zinc-700 hover:bg-zinc-600 text-white font-bold rounded-xl transition-all hover:scale-105">
+            ← Ver meu bichinho
           </button>
         </div>
       )}

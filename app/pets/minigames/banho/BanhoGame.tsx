@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import PetSprite from '@/components/pets/PetSprite'
 import { loadData, saveData, addPoints, cleanActivePet } from '@/lib/petStore'
 import GameTutorial, { TutorialButton } from '@/components/pets/GameTutorial'
@@ -19,6 +20,7 @@ const MAX_DIRTY = 8
 const SPAWN_INTERVAL_START = 1500 // ms
 
 export default function BanhoGame({ initialUser }: { initialUser: DiscordUser | null }) {
+  const router = useRouter()
   const [gameState, setGameState] = useState<'idle' | 'playing' | 'over' | 'tutorial'>('idle')
   const [spots, setSpots] = useState<DirtSpot[]>([])
   const [score, setScore] = useState(0)
@@ -223,6 +225,10 @@ export default function BanhoGame({ initialUser }: { initialUser: DiscordUser | 
           <button onClick={startGame}
             className="px-8 py-3 bg-blue-500 hover:bg-blue-400 text-white font-bold rounded-xl transition-all hover:scale-105">
             Jogar Novamente
+          </button>
+          <button onClick={() => router.push('/pets')}
+            className="px-8 py-3 bg-zinc-700 hover:bg-zinc-600 text-white font-bold rounded-xl transition-all hover:scale-105">
+            ← Ver meu bichinho
           </button>
         </div>
       )}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { loadData, saveData, addPoints, feedActivePet } from '@/lib/petStore'
 import GameTutorial, { TutorialButton } from '@/components/pets/GameTutorial'
 
@@ -26,6 +27,7 @@ interface Fish {
 }
 
 export default function PescaGame({ initialUser }: { initialUser: DiscordUser | null }) {
+  const router = useRouter()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const aliveRef = useRef(false)
   const scoreRef = useRef(0)
@@ -371,6 +373,10 @@ export default function PescaGame({ initialUser }: { initialUser: DiscordUser | 
           <button onClick={startGame}
             className="px-8 py-3 bg-cyan-500 hover:bg-cyan-400 text-white font-bold rounded-xl transition-all hover:scale-105">
             Pescar Novamente
+          </button>
+          <button onClick={() => router.push('/pets')}
+            className="px-8 py-3 bg-zinc-700 hover:bg-zinc-600 text-white font-bold rounded-xl transition-all hover:scale-105">
+            ← Ver meu bichinho
           </button>
         </div>
       )}

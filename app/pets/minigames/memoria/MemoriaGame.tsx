@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { loadData, saveData, addPoints } from '@/lib/petStore'
 import GameTutorial, { TutorialButton } from '@/components/pets/GameTutorial'
 
@@ -41,6 +42,7 @@ function shuffleCards(): Card[] {
 }
 
 export default function MemoriaGame({ initialUser }: { initialUser: DiscordUser | null }) {
+  const router = useRouter()
   const [phase, setPhase] = useState<'idle' | 'tutorial' | 'playing' | 'over'>('idle')
   const [cards, setCards] = useState<Card[]>([])
   const [moves, setMoves] = useState(0)
@@ -247,6 +249,10 @@ export default function MemoriaGame({ initialUser }: { initialUser: DiscordUser 
           <button onClick={startGame}
             className="px-8 py-3 bg-indigo-500 hover:bg-indigo-400 text-white font-bold rounded-xl transition-all hover:scale-105">
             Jogar Novamente
+          </button>
+          <button onClick={() => router.push('/pets')}
+            className="px-8 py-3 bg-zinc-700 hover:bg-zinc-600 text-white font-bold rounded-xl transition-all hover:scale-105">
+            ← Ver meu bichinho
           </button>
         </div>
       )}

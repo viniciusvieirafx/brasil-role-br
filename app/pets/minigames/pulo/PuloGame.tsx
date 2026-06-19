@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { loadData, saveData, addPoints, updateHighScore } from '@/lib/petStore'
 import GameTutorial, { TutorialButton } from '@/components/pets/GameTutorial'
 
@@ -62,6 +63,7 @@ function makeState(): GameState {
 }
 
 export default function PuloGame({ initialUser }: { initialUser: DiscordUser | null }) {
+  const router = useRouter()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const gsRef = useRef<GameState>(makeState())
   const rafRef = useRef(0)
@@ -363,6 +365,10 @@ export default function PuloGame({ initialUser }: { initialUser: DiscordUser | n
           <button onClick={startGame}
             className="px-8 py-3 bg-green-500 hover:bg-green-400 text-white font-bold rounded-xl transition-all hover:scale-105">
             Tentar Novamente
+          </button>
+          <button onClick={() => router.push('/pets')}
+            className="px-8 py-3 bg-zinc-700 hover:bg-zinc-600 text-white font-bold rounded-xl transition-all hover:scale-105">
+            ← Ver meu bichinho
           </button>
         </div>
       )}

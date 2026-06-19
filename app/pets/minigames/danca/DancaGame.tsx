@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { loadData, saveData, addPoints, addXpBoostToActivePet } from '@/lib/petStore'
 import GameTutorial, { TutorialButton } from '@/components/pets/GameTutorial'
 
@@ -30,6 +31,7 @@ function randomDir(): Direction {
 }
 
 export default function DancaGame({ initialUser }: { initialUser: DiscordUser | null }) {
+  const router = useRouter()
   const [phase, setPhase] = useState<Phase>('idle')
   const [sequence, setSequence] = useState<Direction[]>([])
   const [showIdx, setShowIdx] = useState(-1)
@@ -301,6 +303,10 @@ export default function DancaGame({ initialUser }: { initialUser: DiscordUser | 
           <button onClick={startGame}
             className="px-8 py-3 bg-pink-500 hover:bg-pink-400 text-white font-bold rounded-xl transition-all hover:scale-105">
             Jogar Novamente
+          </button>
+          <button onClick={() => router.push('/pets')}
+            className="px-8 py-3 bg-zinc-700 hover:bg-zinc-600 text-white font-bold rounded-xl transition-all hover:scale-105">
+            ← Ver meu bichinho
           </button>
         </div>
       )}
