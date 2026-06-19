@@ -7,7 +7,7 @@ import {
   type PetPlayerData,
 } from '@/lib/petStore'
 import {
-  UPGRADES, computeStats, upgradeCost, formatMoedas,
+  UPGRADES, computeStats, upgradeCost, upgradeEffectText, formatMoedas,
   BUY_RATE, SELL_RATE,
   type UpgradeDef,
 } from '@/lib/clickerData'
@@ -429,23 +429,8 @@ export default function ClickerGame({ initialUser }: { initialUser: DiscordUser 
                 const isMax = lvl >= upg.maxLevel
                 const canAfford = !isMax && moedas >= cost
 
-                let effectText = ''
-                if (!isMax) {
-                  if (upg.type === 'click')         effectText = `+${(lvl + 1) * (upg.valuePerLevel ?? 1)} moedas/clique`
-                  else if (upg.type === 'passive')  effectText = `${(lvl + 1) * (upg.valuePerLevel ?? 0)}/s`
-                  else if (upg.type === 'multiplier' && upg.valuesPerLevel) effectText = `×${upg.valuesPerLevel[lvl] ?? ''}`
-                  else if (upg.type === 'click_modifier' && upg.valuesPerLevel) effectText = `${Math.round((upg.valuesPerLevel[lvl] ?? 0) * 100)}% crit`
-                  else if (upg.type === 'fury' && upg.valuesPerLevel) effectText = `a cada ${upg.valuesPerLevel[lvl] ?? ''} cliques`
-                  else if (upg.type === 'auto_click' && upg.valuesPerLevel) effectText = `a cada ${(upg.valuesPerLevel[lvl] ?? 0) / 1000}s`
-                } else {
-                  // Show current effect at max level
-                  if (upg.type === 'click')         effectText = `+${lvl * (upg.valuePerLevel ?? 1)} moedas/clique`
-                  else if (upg.type === 'passive')  effectText = `${lvl * (upg.valuePerLevel ?? 0)}/s`
-                  else if (upg.type === 'multiplier' && upg.valuesPerLevel) effectText = `×${upg.valuesPerLevel[lvl - 1] ?? ''}`
-                  else if (upg.type === 'click_modifier' && upg.valuesPerLevel) effectText = `${Math.round((upg.valuesPerLevel[lvl - 1] ?? 0) * 100)}% crit`
-                  else if (upg.type === 'fury' && upg.valuesPerLevel) effectText = `a cada ${upg.valuesPerLevel[lvl - 1] ?? ''} cliques`
-                  else if (upg.type === 'auto_click' && upg.valuesPerLevel) effectText = `a cada ${(upg.valuesPerLevel[lvl - 1] ?? 0) / 1000}s`
-                }
+                // Show next-level effect (or current if maxed)
+                const effectText = upgradeEffectText(upg, isMax ? lvl : lvl + 1)
 
                 return (
                   <div key={upg.id} className={`bg-zinc-800/60 border rounded-xl p-3 flex items-center gap-3
