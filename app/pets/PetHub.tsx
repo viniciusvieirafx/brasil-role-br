@@ -177,8 +177,8 @@ export default function PetHub({ initialUser, vipTier = 0 }: { initialUser: Disc
     if (!initialUser) return
     // Carrega localStorage imediatamente (sem delay)
     const { data: local } = updateActivePetFull(loadData(initialUser.id))
-    // Marca o momento do save local para comparar com o servidor
-    const localSavedAt = Date.now()
+    // Guarda o timestamp do dado local para comparar com o servidor
+    const localUpdatedAt = local.updatedAt ?? 0
     // Só salva no servidor se tiver dados reais — evita sobrescrever dados do servidor
     // com localStorage vazio quando o usuário entra de um dispositivo novo
     if (local.hasStarted) saveData(local)
@@ -189,7 +189,7 @@ export default function PetHub({ initialUser, vipTier = 0 }: { initialUser: Disc
     // onde o servidor ainda não recebeu o XP salvo pelo minigame
     loadFromServer().then(server => {
       if (!server) return
-      if ((server.updatedAt ?? 0) <= localSavedAt) return  // local é mais recente, ignora servidor
+      if ((server.updatedAt ?? 0) <= localUpdatedAt) return  // local é mais recente, ignora servidor
       const { data: synced } = updateActivePetFull(server)
       saveData(synced)
       setData(synced)
