@@ -289,7 +289,7 @@ export function saveClicker(data: PetPlayerData, clicker: ClickerState): PetPlay
 }
 
 export const MAX_LIVES = 3
-export const RECOVERY_MS = 24 * 60 * 60 * 1000  // 24h
+export const RECOVERY_MS = 1 * 60 * 60 * 1000  // 1h por coração
 
 export const BATTLE_LIMIT    = 3
 export const BATTLE_COOLDOWN_MS = 60 * 60 * 1000  // 1h
@@ -298,10 +298,14 @@ export function applyBattleLoss(data: PetPlayerData, instanceId: string): PetPla
   const pets = data.ownedPets.map(p => {
     if (p.instanceId !== instanceId) return p
     const newLives = Math.max(0, (p.lives ?? MAX_LIVES) - 1)
-    if (newLives === 0) {
-      return { ...p, lives: 0, recovering: true, recoveryEndsAt: Date.now() + RECOVERY_MS }
+    // Inicia recovery sempre que perder um coração e ainda não estiver recuperando
+    const shouldStartRecovery = newLives < MAX_LIVES && !p.recovering
+    return {
+      ...p,
+      lives: newLives,
+      recovering: shouldStartRecovery || p.recovering,
+      recoveryEndsAt: shouldStartRecovery ? Date.now() + RECOVERY_MS : p.recoveryEndsAt,
     }
-    return { ...p, lives: newLives }
   })
   return { ...data, ownedPets: pets }
 }
@@ -309,10 +313,15 @@ export function applyBattleLoss(data: PetPlayerData, instanceId: string): PetPla
 export function checkRecovery(data: PetPlayerData): PetPlayerData {
   const now = Date.now()
   const pets = data.ownedPets.map(p => {
-    if (p.recovering && p.recoveryEndsAt && now >= p.recoveryEndsAt) {
-      return { ...p, recovering: false, lives: MAX_LIVES, recoveryEndsAt: undefined }
+    if (!p.recovering || !p.recoveryEndsAt || now < p.recoveryEndsAt) return p
+    // Recupera 1 coração por vez
+    const newLives = Math.min(MAX_LIVES, (p.lives ?? 0) + 1)
+    if (newLives >= MAX_LIVES) {
+      // Totalmente recuperado
+      return { ...p, lives: MAX_LIVES, recovering: false, recoveryEndsAt: undefined }
     }
-    return p
+    // Ainda falta coração — agenda o próximo
+    return { ...p, lives: newLives, recovering: true, recoveryEndsAt: now + RECOVERY_MS }
   })
   return { ...data, ownedPets: pets }
 }

@@ -9,6 +9,7 @@ interface DiscordUser { id: string; username: string; avatar: string | null; glo
 
 const GAME_DURATION = 30
 const EXERCISES = ['Flexão 🏋️', 'Agachamento 🦵', 'Pulo ⬆️', 'Corrida 🏃']
+const MIN_TAP_INTERVAL_MS = 250  // anti-autoclicker: máx ~4 taps/seg
 
 function getGreenZone(reps: number): [number, number] {
   const sets = Math.floor(reps / 5)
@@ -32,6 +33,7 @@ export default function TreinoGame({ initialUser }: { initialUser: DiscordUser |
   const [earned, setEarned] = useState(0)
 
   const barPosRef = useRef(0)
+  const renderedPosRef = useRef(0)  // posição exibida na tela — usada na detecção de hit
   const dirRef = useRef(1)  // 1 = moving right, -1 = moving left
   const repsRef = useRef(0)
   const timeRef = useRef(GAME_DURATION)
@@ -41,6 +43,7 @@ export default function TreinoGame({ initialUser }: { initialUser: DiscordUser |
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const handleTapRef = useRef<(() => void) | null>(null)
+  const lastTapRef = useRef(0)  // timestamp do último tap (anti-autoclicker)
 
   function stopAll() {
     aliveRef.current = false
@@ -71,7 +74,9 @@ export default function TreinoGame({ initialUser }: { initialUser: DiscordUser |
     barPosRef.current += dirRef.current * speed * dt
     if (barPosRef.current >= 100) { barPosRef.current = 100; dirRef.current = -1 }
     if (barPosRef.current <= 0) { barPosRef.current = 0; dirRef.current = 1 }
-    setBarPos(Math.round(barPosRef.current))
+    const rounded = Math.round(barPosRef.current)
+    renderedPosRef.current = rounded  // mantém em sincronia com o que é exibido
+    setBarPos(rounded)
     rafRef.current = requestAnimationFrame(animate)
   }, [])
 
@@ -102,18 +107,28 @@ export default function TreinoGame({ initialUser }: { initialUser: DiscordUser |
 
   const handleTap = useCallback(() => {
     if (!aliveRef.current) return
-    const pos = barPosRef.current
+
+    // Anti-autoclicker: ignora taps mais rápidos que MIN_TAP_INTERVAL_MS
+    const now = performance.now()
+    if (now - lastTapRef.current < MIN_TAP_INTERVAL_MS) return
+    lastTapRef.current = now
+
+    // Usa a posição renderizada (o que o jogador vê na tela)
+    const pos = renderedPosRef.current
     const [gMin, gMax] = getGreenZone(repsRef.current)
     const isHit = pos >= gMin && pos <= gMax
 
     if (flashTimerRef.current) clearTimeout(flashTimerRef.current)
-    setFlashMsg({ text: isHit ? 'HIT! 💪' : 'MISS!', ok: isHit })
+    setFlashMsg({ text: isHit ? 'HIT! 💪' : 'MISS! -1', ok: isHit })
     flashTimerRef.current = setTimeout(() => setFlashMsg(null), 600)
 
     if (isHit) {
       repsRef.current++
       setReps(repsRef.current)
     } else {
+      // Erro penaliza: remove 1 rep (mínimo 0)
+      repsRef.current = Math.max(0, repsRef.current - 1)
+      setReps(repsRef.current)
       setMisses(m => m + 1)
     }
   }, [])
@@ -149,7 +164,7 @@ export default function TreinoGame({ initialUser }: { initialUser: DiscordUser |
     { emoji: '🟢', title: 'Zona verde',     desc: 'A barra oscila. Toque/pressione Espaço quando o indicador estiver na zona verde do meio.' },
     { emoji: '📈', title: 'Dificuldade',    desc: 'A cada 5 reps, a zona verde fica menor e a barra fica mais rápida. Fique preciso!' },
     { emoji: '🏋️', title: 'Exercícios',     desc: 'A cada 5 reps completas, você muda de exercício: Flexão, Agachamento, Pulo e Corrida.' },
-    { emoji: '⭐', title: 'Pontos',         desc: 'Cada rep vale 4 pontos. Reps também dão XP bônus para o seu bichinho!' },
+    { emoji: '⭐', title: 'Pontos',         desc: 'Cada rep vale 4 pontos. Reps também dão XP bônus para o seu bichinho! Errar remove 1 rep.' },
     { emoji: '⌨️', title: 'Controles',      desc: 'Toque no botão grande ou pressione a barra de espaço para dar a rep.' },
   ]
 

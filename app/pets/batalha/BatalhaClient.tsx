@@ -312,16 +312,16 @@ export default function BatalhaClient({ initialUser }: { initialUser: DiscordUse
   const petDef = getPet(activePet.petId)
   const recSecs = recoverySecondsLeft(activePet)
 
-  // ── Em recuperação ─────────────────────────────────────────────────────────
-  if (activePet.recovering) {
+  // ── Sem vidas — bloqueado até recuperar pelo menos 1 coração ─────────────────
+  if (activePet.lives <= 0) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-8 text-center space-y-4">
         <p className="text-5xl animate-pulse">💤</p>
         <h1 className="text-2xl font-bold text-white">Recuperando...</h1>
-        <p className="text-zinc-400">{activePet.name} perdeu todas as vidas e está se recuperando.</p>
+        <p className="text-zinc-400">{activePet.name} está sem vidas. Próximo coração em:</p>
         <div className="bg-zinc-800/60 border border-zinc-700 rounded-2xl p-6 max-w-xs mx-auto">
           <p className="text-red-400 font-bold text-lg">{formatTimeLeft(recSecs)}</p>
-          <p className="text-zinc-500 text-sm mt-1">até estar pronto para batalhar</p>
+          <p className="text-zinc-500 text-sm mt-1">até o próximo coração (1h por coração)</p>
           <Lives lives={0} />
         </div>
       </div>

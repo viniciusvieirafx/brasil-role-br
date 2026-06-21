@@ -205,28 +205,28 @@ export function formatMoedas(n: number): string {
 // Escala com a produção efetiva do jogador (mps × multiplier).
 //
 // VENDER (moedas → pts):
-//   Sempre custa ~500 s de renda passiva — anti-exploit natural.
-//   Mínimo 2 000 moedas (early game manual).
+//   Custa ~1 000 s de renda passiva. Mínimo 10 000 moedas.
+//   Render: 40 pts por transação.
 //
 // COMPRAR (pts → moedas):
 //   Dá ~200 s de renda passiva como boost.
-//   Mínimo 2 000 moedas (útil no início, menos impactante no late game).
+//   Mínimo 5 000 moedas (útil no início, menos impactante no late game).
 //
-// Exemplos com 50 pts de venda:
-//   0  mps → vender  2 000  |  comprar  2 000
-//   10 mps → vender  5 000  |  comprar  2 000
-//  100 mps → vender 50 000  |  comprar 20 000
-// 1000 mps → vender 500 000 |  comprar 200 000
+// Exemplos com 40 pts de venda:
+//    0  mps → vender  10 000  |  comprar  5 000
+//   10  mps → vender  10 000  |  comprar  5 000
+//  100  mps → vender 100 000  |  comprar 20 000
+// 1000  mps → vender 1 000 000 | comprar 200 000
 export function computeExchange(effectiveMps: number) {
   const mps = Math.max(0, effectiveMps)
-  const sellMoedas = Math.max(2000, Math.round(mps * 500 / 100) * 100)
-  const buyMoedas  = Math.max(2000, Math.round(mps * 200 / 100) * 100)
+  const sellMoedas = Math.max(10_000, Math.round(mps * 1000 / 100) * 100)
+  const buyMoedas  = Math.max(5_000,  Math.round(mps * 200  / 100) * 100)
   return {
-    sell: { moedas: sellMoedas, pts: 50 },
+    sell: { moedas: sellMoedas, pts: 40 },
     buy:  { pts: 200, moedas: buyMoedas },
   }
 }
 
 // Constantes legadas (fallback / referência)
-export const BUY_RATE  = { pts: 200,  moedas: 2000 }
-export const SELL_RATE = { moedas: 2000, pts: 50 }
+export const BUY_RATE  = { pts: 200,   moedas: 5000 }
+export const SELL_RATE = { moedas: 10000, pts: 40 }

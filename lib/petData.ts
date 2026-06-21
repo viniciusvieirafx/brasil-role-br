@@ -114,14 +114,14 @@ export interface CapsuleReward {
   emoji: string
 }
 
-export const CAPSULE_COST = 500
+export const CAPSULE_COST = 1000
 
 // Custo com desconto VIP (tier 0 = sem VIP)
 export function capsuleCostForTier(tier: number): number {
-  if (tier >= 3) return 300
-  if (tier === 2) return 350
-  if (tier === 1) return 400
-  return 500
+  if (tier >= 3) return 600
+  if (tier === 2) return 700
+  if (tier === 1) return 800
+  return 1000
 }
 
 export function rollCapsule(vipTier = 0): CapsuleReward {
