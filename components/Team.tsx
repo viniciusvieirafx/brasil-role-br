@@ -20,6 +20,12 @@ const members: Member[] = [
     discord: 'byssbox',
   },
   {
+    name: 'Spanco',
+    role: 'mod',
+    image: '/team/Spanco.png',
+    discord: 'spanco',
+  },
+  {
     name: 'MiraNaJanela',
     role: 'owner',
     image: '/team/MiraNaJanela.png',
@@ -27,16 +33,16 @@ const members: Member[] = [
     owner: true,
   },
   {
-    name: 'Spanco',
-    role: 'mod',
-    image: '/team/Spanco.png',
-    discord: 'spanco',
-  },
-  {
     name: 'NaomiiUwU',
     role: 'mod',
     image: '/team/NaomiiUwU.png',
     discord: 'naomiiuwu',
+  },
+  {
+    name: 'CoronelGilbert',
+    role: 'mod',
+    image: '/team/CoronelGilbert.png',
+    discord: 'coronelgilbert',
   },
 ]
 
