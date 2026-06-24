@@ -296,7 +296,7 @@ async function handlePurgeUser(interaction: ChatInputCommandInteraction) {
 
   const target = interaction.options.getUser('user', true);
   const limit = interaction.options.getInteger('limit') ?? 100;
-  const channel = interaction.channel as TextChannel;
+  const channel = (interaction.options.getChannel('canal') ?? interaction.channel) as TextChannel;
 
   await interaction.deferReply({ ephemeral: true });
 
@@ -325,6 +325,7 @@ const commands = [
     .setName('purge-user')
     .setDescription('Apaga as últimas mensagens de um usuário neste canal (máx. 14 dias)')
     .addUserOption(o => o.setName('user').setDescription('Usuário alvo').setRequired(true))
+    .addChannelOption(o => o.setName('canal').setDescription('Canal onde apagar (padrão: canal atual)'))
     .addIntegerOption(o => o.setName('limit').setDescription('Quantas mensagens buscar (padrão 100)').setMinValue(1).setMaxValue(100))
     .toJSON(),
 ];
