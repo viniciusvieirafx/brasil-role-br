@@ -22,6 +22,13 @@ const SUPPORT_CHANNEL_ID = '1488376250496974868';
 const MOD_ROLE_ID = process.env.DISCORD_MOD_ROLE_ID;
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://brasil-role-br.com';
 
+// Cargos que podem usar @everyone — todos os outros não podem
+const MENTION_EVERYONE_ROLE_IDS = [
+  '1480918762642210898',
+  '1480918766794706984',
+  '1480918767536963595',
+];
+
 // ──────────────────────────────────────────────
 // KV helper (Upstash REST)
 // ──────────────────────────────────────────────
@@ -38,6 +45,45 @@ async function kvGet(key: string): Promise<string | null> {
     return data.result ?? null;
   } catch {
     return null;
+  }
+}
+
+// ──────────────────────────────────────────────
+// Setup: permissão @everyone
+// ──────────────────────────────────────────────
+
+async function setupMentionEveryonePermissions(guild: Guild) {
+  // Remove MentionEveryone do @everyone (id == guild.id)
+  const everyoneRole = guild.roles.cache.get(guild.id);
+  if (everyoneRole) {
+    const currentPerms = everyoneRole.permissions;
+    if (currentPerms.has(PermissionsBitField.Flags.MentionEveryone)) {
+      await everyoneRole.setPermissions(
+        currentPerms.remove(PermissionsBitField.Flags.MentionEveryone),
+        'Restringir @everyone apenas a cargos autorizados'
+      );
+      console.log('✅ MentionEveryone removido do @everyone');
+    } else {
+      console.log('ℹ️  @everyone já não tem MentionEveryone');
+    }
+  }
+
+  // Adiciona MentionEveryone nos cargos autorizados
+  for (const roleId of MENTION_EVERYONE_ROLE_IDS) {
+    const role = guild.roles.cache.get(roleId);
+    if (!role) {
+      console.warn(`⚠️  Cargo ${roleId} não encontrado na guild`);
+      continue;
+    }
+    if (!role.permissions.has(PermissionsBitField.Flags.MentionEveryone)) {
+      await role.setPermissions(
+        role.permissions.add(PermissionsBitField.Flags.MentionEveryone),
+        'Autorizar uso de @everyone para este cargo'
+      );
+      console.log(`✅ MentionEveryone adicionado ao cargo "${role.name}" (${roleId})`);
+    } else {
+      console.log(`ℹ️  Cargo "${role.name}" já tem MentionEveryone`);
+    }
   }
 }
 
@@ -238,6 +284,34 @@ async function handlePets(interaction: ChatInputCommandInteraction) {
 // Registro de slash commands
 // ──────────────────────────────────────────────
 
+async function handlePurgeUser(interaction: ChatInputCommandInteraction) {
+  const member = interaction.guild?.members.cache.get(interaction.user.id);
+  const isMod = MOD_ROLE_ID && member?.roles.cache.has(MOD_ROLE_ID);
+  const isOwner = interaction.user.id === interaction.guild?.ownerId;
+
+  if (!isMod && !isOwner) {
+    await interaction.reply({ content: '❌ Sem permissão.', ephemeral: true });
+    return;
+  }
+
+  const target = interaction.options.getUser('user', true);
+  const limit = interaction.options.getInteger('limit') ?? 100;
+  const channel = interaction.channel as TextChannel;
+
+  await interaction.deferReply({ ephemeral: true });
+
+  const messages = await channel.messages.fetch({ limit: Math.min(limit, 100) });
+  const toDelete = messages.filter(m => m.author.id === target.id);
+
+  if (toDelete.size === 0) {
+    await interaction.editReply({ content: `Nenhuma mensagem recente de <@${target.id}> encontrada neste canal.` });
+    return;
+  }
+
+  await channel.bulkDelete(toDelete, true);
+  await interaction.editReply({ content: `🗑️ ${toDelete.size} mensagem(ns) de <@${target.id}> deletada(s).` });
+}
+
 const commands = [
   new SlashCommandBuilder()
     .setName('meu-pet')
@@ -246,6 +320,12 @@ const commands = [
   new SlashCommandBuilder()
     .setName('pets')
     .setDescription('Informações sobre o sistema de bichinhos do Brasil Role BR')
+    .toJSON(),
+  new SlashCommandBuilder()
+    .setName('purge-user')
+    .setDescription('Apaga as últimas mensagens de um usuário neste canal (máx. 14 dias)')
+    .addUserOption(o => o.setName('user').setDescription('Usuário alvo').setRequired(true))
+    .addIntegerOption(o => o.setName('limit').setDescription('Quantas mensagens buscar (padrão 100)').setMinValue(1).setMaxValue(100))
     .toJSON(),
 ];
 
@@ -288,6 +368,8 @@ client.once(Events.ClientReady, async (c) => {
   const guild = c.guilds.cache.get(process.env.DISCORD_GUILD_ID!);
   if (!guild) return console.error('❌ Guild não encontrada.');
 
+  await setupMentionEveryonePermissions(guild).catch(console.error);
+
   const supportChannel = guild.channels.cache.get(SUPPORT_CHANNEL_ID) as TextChannel | undefined;
   if (!supportChannel) {
     console.error(`❌ Canal de suporte ${SUPPORT_CHANNEL_ID} não encontrado.`);
@@ -312,6 +394,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     try {
       if (interaction.commandName === 'meu-pet') await handleMeuPet(interaction);
       else if (interaction.commandName === 'pets') await handlePets(interaction);
+      else if (interaction.commandName === 'purge-user') await handlePurgeUser(interaction);
     } catch (err) {
       console.error('Erro no slash command:', err);
       const msg = { content: '❌ Ocorreu um erro. Tente novamente.', ephemeral: true };
