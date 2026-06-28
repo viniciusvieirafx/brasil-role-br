@@ -96,7 +96,7 @@ export const translations: Record<Lang, Translations> = {
       p3: 'Nossa comunidade merece um espaço de qualidade, e é exatamente isso que estou construindo, com novidades e melhorias chegando sempre.',
       stat1: 'Membros VRChat',
       stat2: 'Visitantes',
-      stat3: 'Atualizações',
+      stat3: 'Favoritos',
       stat4: 'Membros Discord',
     },
     team: {
@@ -255,7 +255,7 @@ export const translations: Record<Lang, Translations> = {
       p3: 'Our community deserves a quality space, and that is exactly what I am building, with new features and improvements always on the way.',
       stat1: 'VRChat Members',
       stat2: 'Visitors',
-      stat3: 'Updates',
+      stat3: 'Favorites',
       stat4: 'Discord Members',
     },
     team: {
@@ -414,7 +414,7 @@ export const translations: Record<Lang, Translations> = {
       p3: 'Nuestra comunidad merece un espacio de calidad, y es exactamente eso lo que estoy construyendo, con novedades y mejoras llegando siempre.',
       stat1: 'Miembros VRChat',
       stat2: 'Visitantes',
-      stat3: 'Actualizaciones',
+      stat3: 'Favoritos',
       stat4: 'Miembros Discord',
     },
     team: {

@@ -49,14 +49,31 @@ function StatCard({ label, target, suffix }: { label: string; target: number; su
   )
 }
 
+function formatStat(value: number): { target: number; suffix: string } {
+  if (value >= 1000) {
+    const k = Math.floor(value / 1000)
+    return { target: k, suffix: 'k+' }
+  }
+  return { target: value, suffix: '+' }
+}
+
 export default function About() {
   const { t } = useLanguage()
+  const [liveStats, setLiveStats] = useState<{ visits: number; favorites: number; groupMembers: number; discordMembers: number } | null>(null)
 
+  useEffect(() => {
+    fetch('/api/stats')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => data && setLiveStats(data))
+      .catch(() => {})
+  }, [])
+
+  const visits = formatStat(liveStats?.visits ?? 18000)
   const stats = [
-    { label: t.about.stat1, target: 400, suffix: '+' },
-    { label: t.about.stat2, target: 18,  suffix: 'k+' },
-    { label: t.about.stat3, target: 50,  suffix: '+' },
-    { label: t.about.stat4, target: 250, suffix: '+' },
+    { label: t.about.stat1, target: liveStats?.groupMembers ?? 400, suffix: '+' },
+    { label: t.about.stat2, target: visits.target, suffix: visits.suffix },
+    { label: t.about.stat3, target: liveStats?.favorites ?? 50, suffix: '+' },
+    { label: t.about.stat4, target: liveStats?.discordMembers ?? 250, suffix: '+' },
   ]
 
   return (
