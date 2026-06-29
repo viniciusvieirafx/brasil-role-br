@@ -30,7 +30,16 @@ type Propaganda = {
   notificado: boolean
 }
 
-type Tab = 'vips' | 'propagandas' | 'sorteios' | 'grupos'
+type VerificadoEntry = {
+  discordId:  string
+  username:   string | null
+  globalName: string | null
+  nick:       string | null
+  avatar:     string | null
+  joinedAt:   string | null
+}
+
+type Tab = 'vips' | 'verificados' | 'propagandas' | 'sorteios' | 'grupos'
 
 type GrupoAdmin = {
   slug: string
@@ -150,6 +159,15 @@ export default function ControlePage() {
   const [newTier, setNewTier]         = useState<1|2|3>(1)
   const [newVitalicio, setNewVitalicio] = useState(false)
 
+  // ── Verificados ────────────────────────────────────────────
+  const [verificados, setVerificados]       = useState<VerificadoEntry[]>([])
+  const [verFetching, setVerFetching]       = useState(false)
+  const [verSearch, setVerSearch]           = useState('')
+  const [verVrcEditId, setVerVrcEditId]     = useState<string | null>(null)
+  const [verVrcInput, setVerVrcInput]       = useState('')
+  const [verVrcErr, setVerVrcErr]           = useState<string | null>(null)
+  const [verBusy, setVerBusy]              = useState<string | null>(null)
+
   // ── Sorteios ──────────────────────────────────────────────
   const [sorteio, setSorteio]             = useState<SorteioAdmin | null>(null)
   const [sorteioFetch, setSorteioFetch]   = useState(false)
@@ -234,15 +252,22 @@ export default function ControlePage() {
     setGruposFetch(false)
   }, [])
 
+  const loadVerificados = useCallback(async () => {
+    setVerFetching(true)
+    const res = await fetch('/api/controle/verificados')
+    if (res.ok) setVerificados(await res.json())
+    setVerFetching(false)
+  }, [])
+
   useEffect(() => {
     fetch('/api/controle/auth')
       .then(r => r.json())
       .then(d => {
-        if (d.authenticated) { setStatus('dashboard'); loadVips(); loadPropagandas(); loadSorteio(); loadGrupos() }
+        if (d.authenticated) { setStatus('dashboard'); loadVips(); loadPropagandas(); loadSorteio(); loadGrupos(); loadVerificados() }
         else setStatus('login')
       })
       .catch(() => setStatus('login'))
-  }, [loadVips, loadPropagandas, loadSorteio])
+  }, [loadVips, loadPropagandas, loadSorteio, loadVerificados])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -252,7 +277,7 @@ export default function ControlePage() {
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ password }),
     })
-    if (res.ok) { setStatus('dashboard'); loadVips(); loadPropagandas(); loadSorteio(); loadGrupos() }
+    if (res.ok) { setStatus('dashboard'); loadVips(); loadPropagandas(); loadSorteio(); loadGrupos(); loadVerificados() }
     else {
       const d = await res.json()
       setLoginErr(d.error ?? 'Erro')
@@ -477,6 +502,29 @@ export default function ControlePage() {
     setBusy(null)
   }
 
+  async function handleVerUpdateNick(discordId: string) {
+    const username = verVrcInput.trim()
+    if (!username) return
+    setVerVrcErr(null)
+    setVerBusy(`vrc-${discordId}`)
+    const res = await fetch(`/api/controle/verificados/${discordId}/update-nick`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ vrchatUsername: username }),
+    })
+    const data = await res.json()
+    if (res.ok) {
+      setVerificados(prev => prev.map(v =>
+        v.discordId === discordId ? { ...v, nick: data.displayName } : v
+      ))
+      setVerVrcEditId(null)
+      setVerVrcInput('')
+    } else {
+      setVerVrcErr(data.error ?? 'Erro ao atualizar')
+    }
+    setVerBusy(null)
+  }
+
   async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -589,7 +637,7 @@ export default function ControlePage() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 bg-br-dark2 border border-white/10 rounded-xl p-1 w-fit">
-        {([['vips', 'VIPs'], ['propagandas', 'Propagandas'], ['sorteios', 'Sorteios'], ['grupos', 'Grupos']] as [Tab, string][]).map(([key, label]) => (
+        {([['vips', 'VIPs'], ['verificados', 'Verificados'], ['propagandas', 'Propagandas'], ['sorteios', 'Sorteios'], ['grupos', 'Grupos']] as [Tab, string][]).map(([key, label]) => (
           <button
             key={key}
             onClick={() => setActiveTab(key)}
@@ -954,6 +1002,164 @@ export default function ControlePage() {
               </div>
             )}
           </div>
+        </>
+      )}
+
+      {/* ─── Aba Verificados ─────────────────────────────── */}
+      {activeTab === 'verificados' && (
+        <>
+          {/* Stats */}
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            <div className="bg-br-dark2 border border-white/10 rounded-xl p-4 text-center">
+              <p className="text-3xl font-bold text-green-400">{verificados.length}</p>
+              <p className="text-xs text-white/40 mt-1">Total verificados</p>
+            </div>
+            <div className="bg-br-dark2 border border-white/10 rounded-xl p-4 text-center">
+              <p className="text-3xl font-bold text-purple-400">{verificados.filter(v => v.nick).length}</p>
+              <p className="text-xs text-white/40 mt-1">Com nick personalizado</p>
+            </div>
+          </div>
+
+          {/* Busca */}
+          <div className="bg-br-dark2 border border-white/10 rounded-xl p-4 mb-6">
+            <input
+              type="text"
+              placeholder="Buscar por nome, nick ou ID..."
+              value={verSearch}
+              onChange={e => setVerSearch(e.target.value)}
+              className="w-full bg-br-dark border border-white/15 rounded-lg px-4 py-2.5 text-sm text-white
+                         placeholder-white/30 focus:outline-none focus:border-br-yellow/60 transition-colors"
+            />
+          </div>
+
+          {/* Tabela */}
+          <div className="bg-br-dark2 border border-white/10 rounded-xl overflow-hidden">
+            {verFetching ? (
+              <div className="flex justify-center py-12">
+                <div className="w-6 h-6 border-2 border-br-yellow border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : verificados.length === 0 ? (
+              <p className="text-center text-white/30 py-12">Nenhum verificado encontrado</p>
+            ) : (() => {
+              const term = verSearch.toLowerCase().trim()
+              const filtered = term
+                ? verificados.filter(v =>
+                    (v.nick ?? '').toLowerCase().includes(term) ||
+                    (v.globalName ?? '').toLowerCase().includes(term) ||
+                    (v.username ?? '').toLowerCase().includes(term) ||
+                    v.discordId.includes(term)
+                  )
+                : verificados
+              return filtered.length === 0 ? (
+                <p className="text-center text-white/30 py-12">Nenhum resultado para &quot;{verSearch}&quot;</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-white/10 text-white/40 text-xs uppercase">
+                        <th className="text-left px-4 py-3">Nome</th>
+                        <th className="text-left px-4 py-3 hidden md:table-cell">Username</th>
+                        <th className="text-left px-4 py-3 hidden md:table-cell">ID Discord</th>
+                        <th className="text-right px-4 py-3">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.map((v, i) => (
+                        <React.Fragment key={v.discordId}>
+                          <tr className={`border-b border-white/5 ${verVrcEditId === v.discordId ? 'border-purple-900/40' : 'last:border-0'} ${i % 2 === 0 ? '' : 'bg-white/[0.02]'}`}>
+                            <td className="px-4 py-3 font-medium">
+                              <div className="flex items-center gap-2">
+                                <span>{v.nick ?? v.globalName ?? v.username ?? v.discordId}</span>
+                                {v.nick && v.globalName && v.nick !== v.globalName && (
+                                  <span className="text-xs text-white/30">({v.globalName})</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-white/40 text-xs hidden md:table-cell">
+                              {v.username ?? '—'}
+                            </td>
+                            <td className="px-4 py-3 text-white/40 font-mono text-xs hidden md:table-cell">
+                              {v.discordId}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => {
+                                    setVerVrcEditId(v.discordId)
+                                    setVerVrcInput('')
+                                    setVerVrcErr(null)
+                                  }}
+                                  disabled={!!verBusy}
+                                  title="Atualizar nick via VRChat"
+                                  className="text-xs bg-purple-900/30 text-purple-400 hover:bg-purple-900/60
+                                             px-2 py-1 rounded transition-colors disabled:opacity-40"
+                                >
+                                  VRC
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(v.discordId)
+                                  }}
+                                  title="Copiar ID"
+                                  className="text-xs bg-white/10 text-white/60 hover:bg-white/20
+                                             px-2 py-1 rounded transition-colors"
+                                >
+                                  ID
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                          {verVrcEditId === v.discordId && (
+                            <tr className="bg-purple-950/20 border-b border-white/5">
+                              <td colSpan={4} className="px-4 py-3">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-xs text-purple-300 font-semibold">Username VRChat:</span>
+                                  <input
+                                    type="text"
+                                    autoFocus
+                                    placeholder="ex: NomeExatoNoVRChat"
+                                    value={verVrcInput}
+                                    onChange={e => { setVerVrcInput(e.target.value); setVerVrcErr(null) }}
+                                    onKeyDown={e => { if (e.key === 'Enter') handleVerUpdateNick(v.discordId) }}
+                                    className="bg-br-dark border border-purple-700/50 rounded px-2 py-1 text-xs text-white
+                                               placeholder-white/20 focus:outline-none focus:border-purple-500 w-48"
+                                  />
+                                  <button
+                                    onClick={() => handleVerUpdateNick(v.discordId)}
+                                    disabled={verBusy === `vrc-${v.discordId}` || !verVrcInput.trim()}
+                                    className="text-xs bg-purple-700 text-white font-bold px-3 py-1 rounded
+                                               hover:bg-purple-600 transition-colors disabled:opacity-50"
+                                  >
+                                    {verBusy === `vrc-${v.discordId}` ? 'Buscando...' : 'Atualizar nick'}
+                                  </button>
+                                  <button
+                                    onClick={() => { setVerVrcEditId(null); setVerVrcInput(''); setVerVrcErr(null) }}
+                                    className="text-xs text-white/30 hover:text-white/60"
+                                  >
+                                    ✕
+                                  </button>
+                                  {verVrcErr && <span className="text-xs text-red-400">{verVrcErr}</span>}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )
+            })()}
+          </div>
+
+          {/* Botão atualizar */}
+          <button
+            onClick={loadVerificados}
+            disabled={verFetching}
+            className="mt-4 text-sm text-white/40 hover:text-white/70 transition-colors disabled:opacity-50"
+          >
+            {verFetching ? 'Atualizando...' : 'Atualizar lista'}
+          </button>
         </>
       )}
 
