@@ -197,6 +197,7 @@ export default function PetHub({ initialUser, vipTier = 0 }: { initialUser: Disc
     }).catch(() => {})
 
     // Busca notificações server-push (battle_defended) e mescla localmente
+    // Usa flag para evitar re-adicionar se já foram incorporadas antes
     fetch('/api/pets/notifications')
       .then(r => r.ok ? r.json() : [])
       .then((serverNotifs: ServerNotification[]) => {
@@ -205,9 +206,16 @@ export default function PetHub({ initialUser, vipTier = 0 }: { initialUser: Disc
           if (!prev) return prev
           let updated = prev
           for (const n of serverNotifs) {
-            updated = addNotification(updated, n.type as PetNotification['type'], n.message)
+            // Evita duplicatas: não adiciona se já existe notificação com mesma mensagem recente
+            const isDup = (updated.notifications ?? []).some(
+              existing => existing.message === n.message && existing.type === n.type
+                && Math.abs(existing.timestamp - n.timestamp) < 60_000
+            )
+            if (!isDup) {
+              updated = addNotification(updated, n.type as PetNotification['type'], n.message)
+            }
           }
-          saveData(updated)
+          if (updated !== prev) saveData(updated)
           return updated
         })
       })
@@ -499,6 +507,8 @@ export default function PetHub({ initialUser, vipTier = 0 }: { initialUser: Disc
                   let d = data
                   data.notifications.forEach(n => { d = dismissNotification(d, n.id) })
                   applyAndSave(d)
+                  // Limpa também as notificações server-push do KV para não voltarem
+                  fetch('/api/pets/notifications', { method: 'DELETE' }).catch(() => {})
                 }}
                 className="text-zinc-600 hover:text-zinc-300 text-xs transition-colors"
               >

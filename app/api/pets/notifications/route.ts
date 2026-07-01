@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { kv } from '@vercel/kv'
+import { kvGet, kvSet, kvDel } from '@/lib/kv'
 
 export interface ServerNotification {
   id: string
@@ -22,14 +22,32 @@ export async function GET() {
 
   const user = JSON.parse(raw)
   try {
-    const data = await kv.get<ServerNotification[]>(KEY(user.id))
+    const raw_data = await kvGet(KEY(user.id))
+    if (!raw_data) return NextResponse.json([])
+    const data: ServerNotification[] = JSON.parse(raw_data)
     if (!data || data.length === 0) return NextResponse.json([])
 
     // Limpa após leitura
-    await kv.del(KEY(user.id))
+    await kvDel(KEY(user.id))
     return NextResponse.json(data)
   } catch {
     return NextResponse.json([])
+  }
+}
+
+// DELETE /api/pets/notifications
+// Limpa as notificações server-side do usuário (chamado pelo botão Limpar)
+export async function DELETE() {
+  const cookieStore = await cookies()
+  const raw = cookieStore.get('discord_user')?.value
+  if (!raw) return NextResponse.json({ ok: false }, { status: 401 })
+
+  const user = JSON.parse(raw)
+  try {
+    await kvDel(KEY(user.id))
+    return NextResponse.json({ ok: true })
+  } catch {
+    return NextResponse.json({ ok: false })
   }
 }
 
@@ -56,9 +74,10 @@ export async function POST(req: NextRequest) {
       points: body.points,
     }
 
-    const existing = await kv.get<ServerNotification[]>(KEY(body.targetDiscordId)) ?? []
+    const raw_data = await kvGet(KEY(body.targetDiscordId))
+    const existing: ServerNotification[] = raw_data ? JSON.parse(raw_data) : []
     const updated = [notif, ...existing].slice(0, MAX_NOTIFS)
-    await kv.set(KEY(body.targetDiscordId), updated, { ex: 7 * 24 * 3600 }) // expira em 7 dias
+    await kvSet(KEY(body.targetDiscordId), JSON.stringify(updated))
 
     return NextResponse.json({ ok: true })
   } catch (err) {

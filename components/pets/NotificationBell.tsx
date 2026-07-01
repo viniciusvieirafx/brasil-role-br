@@ -83,7 +83,7 @@ export default function NotificationBell() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-700/60 sticky top-0 bg-[#130F2A]">
             <p className="text-white font-bold text-sm">Notificações</p>
             {notifs.length > 0 && (
-              <button onClick={() => setNotifs([])} className="text-zinc-500 hover:text-zinc-300 text-xs transition-colors">
+              <button onClick={() => { setNotifs([]); setUnread(0); fetch('/api/pets/notifications', { method: 'DELETE' }).catch(() => {}) }} className="text-zinc-500 hover:text-zinc-300 text-xs transition-colors">
                 Limpar
               </button>
             )}
