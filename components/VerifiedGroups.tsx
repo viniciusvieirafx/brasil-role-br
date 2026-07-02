@@ -7,6 +7,7 @@ const groups = [
   { name: 'Warhammer 40k Brasil', image: '/grupos/Warhammer40kBrasil.png', url: 'https://vrc.group/W40KBR.7675' },
   { name: 'Caóticos Anônimos', image: '/grupos/CaoticosAnonimos.png', url: 'https://vrc.group/CAOTIC.9761' },
   { name: 'Star Wars Brasil', image: '/grupos/StarWarsBrasil.png', url: 'https://vrchat.com/home/group/grp_5c7d683c-96dd-446c-926e-dfd712c4923b' },
+  { name: "Moon's Club", image: '/grupos/MoonsClub.png', url: 'https://vrchat.com/home/group/grp_382c5e60-54a6-4cf6-ba8e-a3a894f2ac34' },
 ]
 
 export default function VerifiedGroups() {
