@@ -83,6 +83,16 @@ export async function GET(req: NextRequest) {
         let entry: { expiresAt: string; roleId: string; tier?: number; vitalicio?: boolean }
         try { entry = JSON.parse(raw) } catch { return null }
 
+        // Verifica se é assinante automático
+        let assinante = false
+        try {
+          const subRaw = await kvGet(`sub:${discordId}`)
+          if (subRaw) {
+            const sub = JSON.parse(subRaw)
+            assinante = sub.status === 'authorized' || sub.status === 'pending'
+          }
+        } catch {}
+
         // Vitalícios não expiram nunca
         if (entry.vitalicio) {
           const member = memberMap.get(discordId)
@@ -96,6 +106,7 @@ export async function GET(req: NextRequest) {
             ativo:        true,
             tier:         entry.tier ?? 1,
             vitalicio:    true,
+            assinante,
           }
         }
 
@@ -122,6 +133,7 @@ export async function GET(req: NextRequest) {
           ativo:          true,
           tier:           entry.tier ?? 1,
           vitalicio:      false,
+          assinante,
         }
       })
     )

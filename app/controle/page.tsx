@@ -12,6 +12,7 @@ type VipEntry = {
   ativo:        boolean
   tier?:        1 | 2 | 3
   vitalicio?:   boolean
+  assinante?:   boolean
 }
 
 const TIER_INFO: Record<number, { icon: string; label: string; color: string; bg: string }> = {
@@ -616,11 +617,12 @@ export default function ControlePage() {
   }
 
   // ── Dashboard ────────────────────────────────────────────
-  const vitalicioCount = vips.filter(v => v.vitalicio).length
-  const pagantes       = vips.filter(v => !v.vitalicio)
-  const ativos         = pagantes.filter(v => v.diasRestantes > 0).length
-  const vencendo       = pagantes.filter(v => v.diasRestantes > 0 && v.diasRestantes <= 7).length
-  const vencidos       = pagantes.filter(v => v.diasRestantes <= 0).length
+  const vitalicioCount  = vips.filter(v => v.vitalicio).length
+  const assinanteCount  = vips.filter(v => v.assinante).length
+  const pagantes        = vips.filter(v => !v.vitalicio)
+  const ativos          = pagantes.filter(v => v.diasRestantes > 0).length
+  const vencendo        = pagantes.filter(v => v.diasRestantes > 0 && v.diasRestantes <= 7).length
+  const vencidos        = pagantes.filter(v => v.diasRestantes <= 0).length
 
   return (
     <div className="min-h-screen bg-br-dark text-white p-4 md:p-8">
@@ -656,12 +658,13 @@ export default function ControlePage() {
       {activeTab === 'vips' && (
         <>
           {/* Stats */}
-          <div className="grid grid-cols-4 gap-3 mb-8">
+          <div className="grid grid-cols-5 gap-3 mb-8">
             {[
-              { label: 'Ativos',     value: ativos,         color: 'text-green-400' },
-              { label: 'Vencendo',   value: vencendo,       color: 'text-yellow-400' },
-              { label: 'Vencidos',   value: vencidos,       color: 'text-red-400' },
-              { label: 'Vitalícios', value: vitalicioCount, color: 'text-purple-400' },
+              { label: 'Ativos',      value: ativos,          color: 'text-green-400' },
+              { label: 'Vencendo',    value: vencendo,        color: 'text-yellow-400' },
+              { label: 'Vencidos',    value: vencidos,        color: 'text-red-400' },
+              { label: 'Vitalícios',  value: vitalicioCount,  color: 'text-purple-400' },
+              { label: 'Assinantes',  value: assinanteCount,  color: 'text-blue-400' },
             ].map(s => (
               <div key={s.label} className="bg-br-dark2 border border-white/10 rounded-xl p-4 text-center">
                 <p className={`text-3xl font-bold ${s.color}`}>{s.value}</p>
@@ -826,12 +829,15 @@ export default function ControlePage() {
                       <tr
                         className={`border-b border-white/5 ${vrcEditId === v.discordId ? 'border-purple-900/40' : 'last:border-0'} ${i % 2 === 0 ? '' : 'bg-white/[0.02]'}`}
                       >
-                        {/* Nome + badge vitalício */}
+                        {/* Nome + badges */}
                         <td className="px-4 py-3 font-medium">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span>{displayName(v)}</span>
                             {v.vitalicio && (
                               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-800/50 text-purple-300 leading-none">♾️ vitalício</span>
+                            )}
+                            {v.assinante && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-800/50 text-blue-300 leading-none">💳 assinante</span>
                             )}
                           </div>
                         </td>
