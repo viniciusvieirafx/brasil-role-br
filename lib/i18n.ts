@@ -43,6 +43,19 @@ export type Translations = {
     waitingTitle: string; waitingDesc: string
     copyPix: string; copiedPix: string; checking: string
     paidTitle: string; paidDesc_before: string; paidDesc_after: string; paidHint: string
+    // Gift
+    giftForMe: string; giftForOther: string
+    giftSearchPlaceholder: string; giftSearching: string; giftUserNotFound: string
+    giftPaidTitle: string; giftPaidDesc: string
+    // Subscription
+    payOnce: string; paySubscription: string
+    subDesc: string; subEmailPlaceholder: string
+    subBtn: string; subBtnLoading: string; subRedirect: string
+    subSuccessTitle: string; subSuccessDesc: string
+    subPendingTitle: string; subPendingDesc: string
+    subErrorTitle: string; subErrorDesc: string
+    // Errors
+    errorGeneric: string
   }
   contact: {
     titleA: string; titleB: string; subtitle: string
@@ -195,6 +208,30 @@ export const translations: Record<Lang, Translations> = {
       paidDesc_before: 'Seu cargo ',
       paidDesc_after: ' foi ativado no Discord automaticamente!',
       paidHint: 'Válido por 30 dias. Para renovar, volte aqui e pague novamente.',
+      // Gift
+      giftForMe: 'Para mim',
+      giftForOther: 'Presentear',
+      giftSearchPlaceholder: 'Buscar pelo nome no Discord...',
+      giftSearching: 'Buscando...',
+      giftUserNotFound: 'Nenhum membro encontrado no servidor',
+      giftPaidTitle: 'Presente enviado!',
+      giftPaidDesc: 'O VIP foi ativado e o presenteado foi notificado no Discord!',
+      // Subscription
+      payOnce: 'PIX (único)',
+      paySubscription: 'Assinatura (Cartão)',
+      subDesc: 'Cobrança mensal automática no cartão de crédito',
+      subEmailPlaceholder: 'Seu email para o Mercado Pago',
+      subBtn: 'Assinar',
+      subBtnLoading: 'Criando assinatura...',
+      subRedirect: 'Você será redirecionado ao Mercado Pago para autorizar a assinatura.',
+      subSuccessTitle: 'Assinatura criada!',
+      subSuccessDesc: 'Sua assinatura foi autorizada. O VIP será ativado em instantes!',
+      subPendingTitle: 'Assinatura pendente',
+      subPendingDesc: 'Sua assinatura está sendo processada. O VIP será ativado assim que confirmado.',
+      subErrorTitle: 'Erro na assinatura',
+      subErrorDesc: 'Houve um problema ao criar sua assinatura. Tente novamente.',
+      // Errors
+      errorGeneric: 'Ocorreu um erro. Tente novamente.',
     },
     contact: {
       titleA: 'ENTRAR EM',
@@ -360,6 +397,27 @@ export const translations: Record<Lang, Translations> = {
       paidDesc_before: 'Your ',
       paidDesc_after: ' role has been automatically activated on Discord!',
       paidHint: 'Valid for 30 days. To renew, come back here and pay again.',
+      giftForMe: 'For me',
+      giftForOther: 'Gift someone',
+      giftSearchPlaceholder: 'Search by Discord name...',
+      giftSearching: 'Searching...',
+      giftUserNotFound: 'No member found in the server',
+      giftPaidTitle: 'Gift sent!',
+      giftPaidDesc: 'VIP has been activated and the recipient was notified on Discord!',
+      payOnce: 'PIX (one-time)',
+      paySubscription: 'Subscription (Card)',
+      subDesc: 'Automatic monthly charge on credit card',
+      subEmailPlaceholder: 'Your email for Mercado Pago',
+      subBtn: 'Subscribe',
+      subBtnLoading: 'Creating subscription...',
+      subRedirect: 'You will be redirected to Mercado Pago to authorize the subscription.',
+      subSuccessTitle: 'Subscription created!',
+      subSuccessDesc: 'Your subscription has been authorized. VIP will be activated shortly!',
+      subPendingTitle: 'Subscription pending',
+      subPendingDesc: 'Your subscription is being processed. VIP will be activated once confirmed.',
+      subErrorTitle: 'Subscription error',
+      subErrorDesc: 'There was a problem creating your subscription. Please try again.',
+      errorGeneric: 'An error occurred. Please try again.',
     },
     contact: {
       titleA: 'GET IN',
@@ -525,6 +583,27 @@ export const translations: Record<Lang, Translations> = {
       paidDesc_before: 'Tu rol ',
       paidDesc_after: ' fue activado en Discord automáticamente.',
       paidHint: 'Válido por 30 días. Para renovar, vuelve aquí y paga nuevamente.',
+      giftForMe: 'Para mí',
+      giftForOther: 'Regalar',
+      giftSearchPlaceholder: 'Buscar por nombre en Discord...',
+      giftSearching: 'Buscando...',
+      giftUserNotFound: 'Ningún miembro encontrado en el servidor',
+      giftPaidTitle: '¡Regalo enviado!',
+      giftPaidDesc: '¡El VIP fue activado y el destinatario fue notificado en Discord!',
+      payOnce: 'PIX (único)',
+      paySubscription: 'Suscripción (Tarjeta)',
+      subDesc: 'Cobro mensual automático en tarjeta de crédito',
+      subEmailPlaceholder: 'Tu email para Mercado Pago',
+      subBtn: 'Suscribirse',
+      subBtnLoading: 'Creando suscripción...',
+      subRedirect: 'Serás redirigido a Mercado Pago para autorizar la suscripción.',
+      subSuccessTitle: '¡Suscripción creada!',
+      subSuccessDesc: 'Tu suscripción fue autorizada. ¡El VIP se activará en instantes!',
+      subPendingTitle: 'Suscripción pendiente',
+      subPendingDesc: 'Tu suscripción está siendo procesada. El VIP se activará al confirmarse.',
+      subErrorTitle: 'Error en suscripción',
+      subErrorDesc: 'Hubo un problema al crear tu suscripción. Inténtalo de nuevo.',
+      errorGeneric: 'Ocurrió un error. Inténtalo de nuevo.',
     },
     contact: {
       titleA: 'ENTRAR EN',

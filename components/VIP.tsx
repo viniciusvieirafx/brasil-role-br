@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { QRCodeSVG } from 'qrcode.react'
 import { useLanguage } from '@/contexts/LanguageContext'
 
@@ -10,7 +11,17 @@ interface DiscordUser {
   globalName: string | null
 }
 
-type Step = 'login' | 'needsVerify' | 'selectTier' | 'waiting' | 'paid'
+interface GiftTarget {
+  id: string
+  username: string
+  globalName: string | null
+  avatar: string | null
+  nick: string | null
+}
+
+type Step = 'login' | 'needsVerify' | 'selectTier' | 'waiting' | 'paid' | 'subResult'
+type PayMode = 'pix' | 'subscription'
+type GiftMode = 'self' | 'gift'
 
 interface TierInfo {
   tier: 1 | 2 | 3
@@ -97,20 +108,46 @@ function pickInitialStep(user: DiscordUser | null, verified: boolean): Step {
 
 export default function VIP({ initialUser, initialVerified }: { initialUser: DiscordUser | null; initialVerified: boolean }) {
   const { t } = useLanguage()
+  const searchParams = useSearchParams()
   const [step, setStep] = useState<Step>(pickInitialStep(initialUser, initialVerified))
   const [selectedTier, setSelectedTier] = useState<TierInfo | null>(null)
   const [pixData, setPixData] = useState<{ qrCode: string; paymentId: number } | null>(null)
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Gift state
+  const [giftMode, setGiftMode] = useState<GiftMode>('self')
+  const [giftSearch, setGiftSearch] = useState('')
+  const [giftResults, setGiftResults] = useState<GiftTarget[]>([])
+  const [giftTarget, setGiftTarget] = useState<GiftTarget | null>(null)
+  const [giftSearching, setGiftSearching] = useState(false)
+
+  // Subscription state
+  const [payMode, setPayMode] = useState<PayMode>('pix')
+  const [subEmail, setSubEmail] = useState('')
+  const [subResultType, setSubResultType] = useState<'success' | 'pending' | 'error'>('success')
+
+  // Check URL params for subscription callback
+  useEffect(() => {
+    const sub = searchParams.get('sub')
+    if (sub === 'success' || sub === 'pending' || sub === 'error') {
+      setSubResultType(sub)
+      setStep('subResult')
+      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname + window.location.hash)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     setStep(prev => {
-      if (prev === 'waiting' || prev === 'paid') return prev
+      if (prev === 'waiting' || prev === 'paid' || prev === 'subResult') return prev
       return pickInitialStep(initialUser, initialVerified)
     })
   }, [initialUser, initialVerified])
 
+  // PIX polling
   useEffect(() => {
     if (step !== 'waiting' || !pixData) return
 
@@ -126,23 +163,105 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
     return () => { if (pollRef.current) clearInterval(pollRef.current) }
   }, [step, pixData])
 
-  const handleCreatePayment = async () => {
-    if (!selectedTier) return
-    setLoading(true)
-    const res = await fetch('/api/create-payment', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tier: selectedTier.tier }),
-    })
-    const data = await res.json()
-    if (res.status === 403 && data.code === 'NOT_VERIFIED') {
-      setStep('needsVerify')
-      setLoading(false)
+  // Gift search with debounce
+  useEffect(() => {
+    if (giftSearch.length < 2) {
+      setGiftResults([])
       return
     }
-    setPixData({ qrCode: data.qrCode, paymentId: data.paymentId })
-    setStep('waiting')
+
+    const timeout = setTimeout(async () => {
+      setGiftSearching(true)
+      try {
+        const res = await fetch(`/api/gift/search?q=${encodeURIComponent(giftSearch)}`)
+        const data = await res.json()
+        setGiftResults(data.members ?? [])
+      } catch {
+        setGiftResults([])
+      }
+      setGiftSearching(false)
+    }, 400)
+
+    return () => clearTimeout(timeout)
+  }, [giftSearch])
+
+  const handleCreatePayment = async () => {
+    if (!selectedTier) return
+    if (giftMode === 'gift' && !giftTarget) return
+
+    setLoading(true)
+    setErrorMsg('')
+
+    try {
+      const res = await fetch('/api/create-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tier: selectedTier.tier,
+          giftToId: giftMode === 'gift' ? giftTarget?.id : undefined,
+        }),
+      })
+      const data = await res.json()
+
+      if (res.status === 403 && data.code === 'NOT_VERIFIED') {
+        setStep('needsVerify')
+        setLoading(false)
+        return
+      }
+
+      if (!res.ok) {
+        setErrorMsg(data.error ?? t.vip.errorGeneric)
+        setLoading(false)
+        return
+      }
+
+      setPixData({ qrCode: data.qrCode, paymentId: data.paymentId })
+      setStep('waiting')
+    } catch {
+      setErrorMsg(t.vip.errorGeneric)
+    }
     setLoading(false)
+  }
+
+  const handleCreateSubscription = async () => {
+    if (!selectedTier) return
+    if (!subEmail.includes('@')) {
+      setErrorMsg(t.vip.subEmailPlaceholder)
+      return
+    }
+
+    setLoading(true)
+    setErrorMsg('')
+
+    try {
+      const res = await fetch('/api/create-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tier: selectedTier.tier,
+          email: subEmail,
+        }),
+      })
+      const data = await res.json()
+
+      if (res.status === 403 && data.code === 'NOT_VERIFIED') {
+        setStep('needsVerify')
+        setLoading(false)
+        return
+      }
+
+      if (!res.ok) {
+        setErrorMsg(data.error ?? t.vip.errorGeneric)
+        setLoading(false)
+        return
+      }
+
+      // Redireciona pro Mercado Pago
+      window.location.href = data.initPoint
+    } catch {
+      setErrorMsg(t.vip.errorGeneric)
+      setLoading(false)
+    }
   }
 
   const handleCopy = () => {
@@ -156,6 +275,8 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
     ? `https://cdn.discordapp.com/avatars/${initialUser.id}/${initialUser.avatar}.png`
     : null
 
+  const isGift = giftMode === 'gift'
+
   return (
     <section id="vip" className="py-24 bg-br-dark2">
       <div className="max-w-6xl mx-auto px-6">
@@ -167,7 +288,7 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
           <p className="text-gray-400 text-lg">{t.vip.subtitle}</p>
         </div>
 
-        {/* Tier cards — visíveis sempre */}
+        {/* Tier cards */}
         <div className="grid md:grid-cols-3 gap-5 mb-10">
           {TIERS.map(tier => (
             <div
@@ -179,20 +300,14 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
               } ${selectedTier?.tier === tier.tier ? 'scale-[1.02] brightness-110' : ''}`}
             >
               {tier.highlight && (
-                <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-xs font-bold bg-br-yellow text-br-dark`}>
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-xs font-bold bg-br-yellow text-br-dark">
                   {tier.highlight}
                 </div>
               )}
               <div className="text-center mb-4">
                 <div className="flex justify-center mb-2" style={{ perspective: '300px' }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src="/MoedaVip.png"
-                    alt={tier.name}
-                    width={72}
-                    height={72}
-                    className={COIN_CLASS[tier.tier]}
-                  />
+                  <img src="/MoedaVip.png" alt={tier.name} width={72} height={72} className={COIN_CLASS[tier.tier]} />
                 </div>
                 <h3 className={`text-lg font-bold ${tier.color}`}>{tier.name}</h3>
                 <div className="text-3xl font-extrabold text-white mt-1">
@@ -201,13 +316,11 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
                 </div>
               </div>
               <ul className="space-y-2 text-sm text-gray-300 mb-5">
-                {tier.benefits.map((b, i) => (
-                  <li key={i}>{b}</li>
-                ))}
+                {tier.benefits.map((b, i) => <li key={i}>{b}</li>)}
               </ul>
-              {(step === 'selectTier') && (
+              {step === 'selectTier' && (
                 <button
-                  onClick={() => setSelectedTier(tier)}
+                  onClick={() => { setSelectedTier(tier); setErrorMsg('') }}
                   className={`w-full py-2.5 rounded-xl font-bold text-sm transition-all border ${tier.borderColor} ${tier.color} hover:bg-white/10 ${
                     selectedTier?.tier === tier.tier ? 'bg-white/10' : ''
                   }`}
@@ -289,6 +402,7 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
 
           {step === 'selectTier' && initialUser && (
             <div className="text-center space-y-5 w-full">
+              {/* User info */}
               <div className="flex items-center justify-center gap-3">
                 {avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -313,23 +427,175 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
                 </>
               ) : (
                 <>
+                  {/* Tier selecionado */}
                   <div className="flex justify-center" style={{ perspective: '300px' }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/MoedaVip.png" alt={selectedTier.name} width={56} height={56} className={COIN_CLASS[selectedTier.tier]} />
-              </div>
-                  <div>
-                    <p className={`font-bold text-lg ${selectedTier.color}`}>{selectedTier.name}</p>
-                    <p className="text-gray-400 text-sm">R$ {selectedTier.price},00/mês • renovação manual</p>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/MoedaVip.png" alt={selectedTier.name} width={56} height={56} className={COIN_CLASS[selectedTier.tier]} />
                   </div>
+                  <p className={`font-bold text-lg ${selectedTier.color}`}>{selectedTier.name}</p>
+
+                  {/* ── Toggle: Para mim / Presentear ── */}
+                  <div className="flex gap-1 bg-br-dark rounded-xl p-1">
+                    <button
+                      onClick={() => { setGiftMode('self'); setGiftTarget(null); setGiftSearch(''); setErrorMsg('') }}
+                      className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${
+                        giftMode === 'self' ? 'bg-br-green/20 text-br-green' : 'text-gray-500 hover:text-gray-300'
+                      }`}
+                    >
+                      {t.vip.giftForMe}
+                    </button>
+                    <button
+                      onClick={() => { setGiftMode('gift'); setErrorMsg('') }}
+                      className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${
+                        giftMode === 'gift' ? 'bg-br-yellow/20 text-br-yellow' : 'text-gray-500 hover:text-gray-300'
+                      }`}
+                    >
+                      🎁 {t.vip.giftForOther}
+                    </button>
+                  </div>
+
+                  {/* ── Gift: busca de usuário ── */}
+                  {isGift && (
+                    <div className="space-y-3">
+                      <input
+                        type="text"
+                        value={giftSearch}
+                        onChange={e => { setGiftSearch(e.target.value); setGiftTarget(null) }}
+                        placeholder={t.vip.giftSearchPlaceholder}
+                        className="w-full bg-br-dark border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-br-yellow transition-colors text-sm"
+                      />
+                      {giftSearching && (
+                        <p className="text-gray-500 text-xs animate-pulse">{t.vip.giftSearching}</p>
+                      )}
+                      {!giftSearching && giftSearch.length >= 2 && giftResults.length === 0 && (
+                        <p className="text-red-400 text-xs">{t.vip.giftUserNotFound}</p>
+                      )}
+                      {giftResults.length > 0 && !giftTarget && (
+                        <div className="space-y-1 max-h-40 overflow-y-auto">
+                          {giftResults.map(m => (
+                            <button
+                              key={m.id}
+                              onClick={() => { setGiftTarget(m); setGiftResults([]); setGiftSearch('') }}
+                              className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors text-left"
+                            >
+                              {m.avatar ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={`https://cdn.discordapp.com/avatars/${m.id}/${m.avatar}.png?size=32`}
+                                  alt=""
+                                  className="w-8 h-8 rounded-full"
+                                />
+                              ) : (
+                                <div className="w-8 h-8 rounded-full bg-br-blue flex items-center justify-center text-xs font-bold">
+                                  {(m.globalName ?? m.username)[0].toUpperCase()}
+                                </div>
+                              )}
+                              <div>
+                                <p className="text-white text-sm font-semibold">{m.nick ?? m.globalName ?? m.username}</p>
+                                <p className="text-gray-500 text-xs">@{m.username}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {giftTarget && (
+                        <div className="flex items-center gap-3 p-3 bg-br-yellow/10 border border-br-yellow/30 rounded-xl">
+                          {giftTarget.avatar ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={`https://cdn.discordapp.com/avatars/${giftTarget.id}/${giftTarget.avatar}.png?size=32`}
+                              alt=""
+                              className="w-8 h-8 rounded-full"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-br-yellow/30 flex items-center justify-center text-xs font-bold text-br-yellow">
+                              {(giftTarget.globalName ?? giftTarget.username)[0].toUpperCase()}
+                            </div>
+                          )}
+                          <div className="flex-1 text-left">
+                            <p className="text-white text-sm font-semibold">🎁 {giftTarget.nick ?? giftTarget.globalName ?? giftTarget.username}</p>
+                            <p className="text-gray-500 text-xs">@{giftTarget.username}</p>
+                          </div>
+                          <button
+                            onClick={() => { setGiftTarget(null); setGiftSearch('') }}
+                            className="text-gray-500 hover:text-red-400 text-xs"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ── Toggle: PIX / Assinatura ── */}
+                  {!isGift && (
+                    <div className="flex gap-1 bg-br-dark rounded-xl p-1">
+                      <button
+                        onClick={() => { setPayMode('pix'); setErrorMsg('') }}
+                        className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${
+                          payMode === 'pix' ? 'bg-br-green/20 text-br-green' : 'text-gray-500 hover:text-gray-300'
+                        }`}
+                      >
+                        {t.vip.payOnce}
+                      </button>
+                      <button
+                        onClick={() => { setPayMode('subscription'); setErrorMsg('') }}
+                        className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${
+                          payMode === 'subscription' ? 'bg-[#5865F2]/20 text-[#5865F2]' : 'text-gray-500 hover:text-gray-300'
+                        }`}
+                      >
+                        💳 {t.vip.paySubscription}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* ── Subscription: email input ── */}
+                  {payMode === 'subscription' && !isGift && (
+                    <div className="space-y-3">
+                      <p className="text-gray-400 text-xs">{t.vip.subDesc}</p>
+                      <input
+                        type="email"
+                        value={subEmail}
+                        onChange={e => setSubEmail(e.target.value)}
+                        placeholder={t.vip.subEmailPlaceholder}
+                        className="w-full bg-br-dark border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#5865F2] transition-colors text-sm"
+                      />
+                      <p className="text-gray-500 text-xs">{t.vip.subRedirect}</p>
+                    </div>
+                  )}
+
+                  {/* Error display */}
+                  {errorMsg && (
+                    <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3">
+                      <p className="text-red-400 text-sm">{errorMsg}</p>
+                    </div>
+                  )}
+
+                  {/* ── Action button ── */}
+                  {payMode === 'pix' || isGift ? (
+                    <button
+                      onClick={handleCreatePayment}
+                      disabled={loading || (isGift && !giftTarget)}
+                      className="bg-br-green text-white font-bold px-8 py-4 rounded-xl hover:brightness-110 transition-all w-full text-lg disabled:opacity-50 disabled:cursor-not-allowed glow-green"
+                    >
+                      {loading
+                        ? t.vip.payBtnLoading
+                        : isGift
+                          ? `🎁 Gerar PIX — R$ ${selectedTier.price},00`
+                          : `Gerar PIX — R$ ${selectedTier.price},00`}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleCreateSubscription}
+                      disabled={loading || !subEmail.includes('@')}
+                      className="bg-[#5865F2] text-white font-bold px-8 py-4 rounded-xl hover:brightness-110 transition-all w-full text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {loading ? t.vip.subBtnLoading : `${t.vip.subBtn} — R$ ${selectedTier.price},00/mês`}
+                    </button>
+                  )}
+
                   <button
-                    onClick={handleCreatePayment}
-                    disabled={loading}
-                    className="bg-br-green text-white font-bold px-8 py-4 rounded-xl hover:brightness-110 transition-all w-full text-lg disabled:opacity-50 disabled:cursor-not-allowed glow-green"
-                  >
-                    {loading ? t.vip.payBtnLoading : `Gerar PIX — R$ ${selectedTier.price},00`}
-                  </button>
-                  <button
-                    onClick={() => setSelectedTier(null)}
+                    onClick={() => { setSelectedTier(null); setErrorMsg(''); setGiftMode('self'); setPayMode('pix') }}
                     className="text-gray-500 hover:text-gray-300 text-sm transition-colors"
                   >
                     ← Trocar plano
@@ -344,6 +610,9 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
               {selectedTier && (
                 <p className={`text-sm font-bold ${selectedTier.color}`}>
                   {selectedTier.emoji} {selectedTier.name} — R$ {selectedTier.price},00
+                  {isGift && giftTarget && (
+                    <span className="text-br-yellow"> (🎁 {giftTarget.nick ?? giftTarget.globalName ?? giftTarget.username})</span>
+                  )}
                 </p>
               )}
               <h3 className="text-2xl font-bold text-br-yellow">{t.vip.waitingTitle}</h3>
@@ -363,16 +632,54 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
 
           {step === 'paid' && (
             <div className="text-center space-y-5 w-full">
-              <div className="text-7xl">🎉</div>
-              <h3 className="text-3xl font-bold text-br-green">{t.vip.paidTitle}</h3>
-              <p className="text-gray-300 text-lg">
-                {t.vip.paidDesc_before}
-                <strong className={selectedTier?.color ?? 'text-br-yellow'}>
-                  {selectedTier?.name ?? 'VIP'}
-                </strong>
-                {t.vip.paidDesc_after}
-              </p>
+              <div className="text-7xl">{isGift ? '🎁' : '🎉'}</div>
+              <h3 className="text-3xl font-bold text-br-green">
+                {isGift ? t.vip.giftPaidTitle : t.vip.paidTitle}
+              </h3>
+              {isGift ? (
+                <p className="text-gray-300 text-lg">{t.vip.giftPaidDesc}</p>
+              ) : (
+                <p className="text-gray-300 text-lg">
+                  {t.vip.paidDesc_before}
+                  <strong className={selectedTier?.color ?? 'text-br-yellow'}>
+                    {selectedTier?.name ?? 'VIP'}
+                  </strong>
+                  {t.vip.paidDesc_after}
+                </p>
+              )}
               <p className="text-gray-500 text-sm">{t.vip.paidHint}</p>
+            </div>
+          )}
+
+          {step === 'subResult' && (
+            <div className="text-center space-y-5 w-full">
+              {subResultType === 'success' && (
+                <>
+                  <div className="text-7xl">✅</div>
+                  <h3 className="text-3xl font-bold text-br-green">{t.vip.subSuccessTitle}</h3>
+                  <p className="text-gray-300">{t.vip.subSuccessDesc}</p>
+                </>
+              )}
+              {subResultType === 'pending' && (
+                <>
+                  <div className="text-7xl">⏳</div>
+                  <h3 className="text-3xl font-bold text-br-yellow">{t.vip.subPendingTitle}</h3>
+                  <p className="text-gray-300">{t.vip.subPendingDesc}</p>
+                </>
+              )}
+              {subResultType === 'error' && (
+                <>
+                  <div className="text-7xl">❌</div>
+                  <h3 className="text-3xl font-bold text-red-400">{t.vip.subErrorTitle}</h3>
+                  <p className="text-gray-300">{t.vip.subErrorDesc}</p>
+                  <button
+                    onClick={() => setStep('selectTier')}
+                    className="bg-br-green text-white font-bold px-6 py-3 rounded-xl hover:brightness-110 transition-all"
+                  >
+                    Tentar novamente
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -383,10 +690,9 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
           {t.vip.durationNote_after}
         </div>
 
-        {/* Botão de suporte */}
         <div className="mt-8 text-center">
           <a
-            href={`https://discord.com/channels/972901887034654770/1488376250496974868`}
+            href="https://discord.com/channels/972901887034654770/1488376250496974868"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 border border-white/20 text-gray-300 hover:text-white hover:border-white/40 px-6 py-3 rounded-xl transition-all text-sm"
