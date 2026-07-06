@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useLanguage } from '@/contexts/LanguageContext'
 
@@ -20,12 +20,54 @@ export default function VerifyVRChat({ initialUser, initialVerified }: { initial
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [copied, setCopied] = useState(false)
+  const [autoChecking, setAutoChecking] = useState(false)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     if (!initialUser) return
     if (initialVerified) setStep('alreadyVerified')
     else setStep('username')
   }, [initialUser, initialVerified])
+
+  // Auto-polling every 5 seconds when on the code step
+  useEffect(() => {
+    if (step !== 'code') {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+      return
+    }
+
+    const check = async () => {
+      setAutoChecking(true)
+      try {
+        const res = await fetch('/api/verify/check', { method: 'POST' })
+        const data = await res.json()
+        if (data.verified) {
+          if (intervalRef.current) clearInterval(intervalRef.current)
+          setStep('done')
+          router.refresh()
+          setTimeout(() => {
+            document.getElementById('vip')?.scrollIntoView({ behavior: 'smooth' })
+          }, 800)
+        }
+      } catch {
+        // silent — will retry on next interval
+      }
+      setAutoChecking(false)
+    }
+
+    // First check after 5s, then every 5s
+    intervalRef.current = setInterval(check, 5000)
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+    }
+  }, [step, router])
 
   const handleStart = async () => {
     if (!vrchatUsername.trim()) return
@@ -142,8 +184,28 @@ export default function VerifyVRChat({ initialUser, initialVerified }: { initial
                 {copied ? t.verify.copied : t.verify.copyBtn}
               </button>
 
-              <div className="bg-br-blue/10 border border-br-blue/20 rounded-xl p-4 text-sm text-gray-400">
-                {t.verify.bioHint}
+              {/* Link direto para o perfil do VRChat */}
+              <a
+                href="https://vrchat.com/home/user"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full text-center border border-[#1DB5D4]/40 text-[#1DB5D4] py-3 rounded-xl hover:bg-[#1DB5D4]/10 transition-all"
+              >
+                {t.verify.openVRChat}
+              </a>
+
+              {/* Ilustração tutorial */}
+              <VRChatTutorial
+                step1={t.verify.tutorialStep1}
+                step2={t.verify.tutorialStep2}
+                step3={t.verify.tutorialStep3}
+                code={code}
+              />
+
+              {/* Auto-check indicator */}
+              <div className="flex items-center justify-center gap-2 text-sm text-gray-400">
+                <span className={`inline-block w-2 h-2 rounded-full ${autoChecking ? 'bg-br-yellow animate-pulse' : 'bg-br-green animate-pulse'}`} />
+                {t.verify.autoCheckMsg}
               </div>
 
               {errorMsg && (
@@ -197,6 +259,85 @@ export default function VerifyVRChat({ initialUser, initialVerified }: { initial
         </div>
       </div>
     </section>
+  )
+}
+
+/* ──────────────────────────────────────────
+   Ilustração SVG do perfil VRChat
+   Mostra onde clicar (Edit Profile) e onde colar o código (About Me)
+   ────────────────────────────────────────── */
+function VRChatTutorial({ step1, step2, step3, code }: { step1: string; step2: string; step3: string; code: string }) {
+  return (
+    <div className="rounded-xl overflow-hidden border border-white/10">
+      <svg viewBox="0 0 400 310" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full">
+        {/* Background */}
+        <rect width="400" height="310" fill="#1a1a2e" />
+
+        {/* Banner area */}
+        <rect x="0" y="0" width="400" height="70" fill="#2a2a4a" />
+        <rect x="0" y="0" width="400" height="70" fill="url(#bannerGrad)" opacity="0.5" />
+
+        {/* Avatar circle */}
+        <circle cx="70" cy="70" r="32" fill="#2d2d4d" stroke="#1a1a2e" strokeWidth="4" />
+        <circle cx="70" cy="70" r="18" fill="#3d3d5d" />
+        <circle cx="63" cy="65" r="3" fill="#6a6a8a" />
+        <circle cx="77" cy="65" r="3" fill="#6a6a8a" />
+        <path d="M63 76 Q70 82 77 76" stroke="#6a6a8a" strokeWidth="2" fill="none" strokeLinecap="round" />
+
+        {/* Username */}
+        <text x="115" y="88" fill="white" fontSize="14" fontWeight="bold" fontFamily="Arial, sans-serif">MeuPerfil</text>
+        <rect x="185" y="77" width="32" height="14" rx="7" fill="#1DB5D4" opacity="0.3" />
+        <text x="191" y="88" fill="#1DB5D4" fontSize="8" fontFamily="Arial, sans-serif">VRC+</text>
+
+        {/* ── STEP 1: Edit Profile Button ── */}
+        <rect x="115" y="100" width="200" height="32" rx="6" fill="#1DB5D4" />
+        <text x="215" y="120" fill="white" fontSize="11" fontWeight="bold" fontFamily="Arial, sans-serif" textAnchor="middle">Edit Profile</text>
+
+        {/* Seta e label do Step 1 */}
+        <path d="M340 116 L325 116" stroke="#FF6B6B" strokeWidth="2.5" markerEnd="url(#arrowRed)" />
+        <rect x="342" y="104" width="55" height="24" rx="4" fill="#FF6B6B" opacity="0.15" />
+        <text x="369" y="119" fill="#FF6B6B" fontSize="7.5" fontWeight="bold" fontFamily="Arial, sans-serif" textAnchor="middle">{step1.replace(/^\d+\.\s*/, '')}</text>
+
+        {/* ── STEP 2: About Me section ── */}
+        <rect x="20" y="150" width="360" height="90" rx="8" fill="#22223a" stroke="#333355" strokeWidth="1" />
+        <text x="35" y="172" fill="#888" fontSize="10" fontWeight="bold" fontFamily="Arial, sans-serif" letterSpacing="1">ABOUT ME</text>
+
+        {/* Linhas de texto na bio + código */}
+        <rect x="35" y="180" width="120" height="8" rx="4" fill="#444466" />
+        <rect x="35" y="194" width="80" height="8" rx="4" fill="#444466" />
+
+        {/* Código destacado */}
+        <rect x="35" y="212" width="140" height="18" rx="4" fill="#009B3A" opacity="0.2" stroke="#009B3A" strokeWidth="1" strokeDasharray="3 2" />
+        <text x="105" y="224" fill="#00D44B" fontSize="10" fontWeight="bold" fontFamily="monospace" textAnchor="middle">{code}</text>
+
+        {/* Seta e label do Step 2 */}
+        <path d="M340 220 L185 220" stroke="#00D44B" strokeWidth="2.5" markerEnd="url(#arrowGreen)" />
+        <rect x="342" y="208" width="55" height="24" rx="4" fill="#00D44B" opacity="0.15" />
+        <text x="369" y="223" fill="#00D44B" fontSize="7.5" fontWeight="bold" fontFamily="Arial, sans-serif" textAnchor="middle">{step2.replace(/^\d+\.\s*/, '')}</text>
+
+        {/* ── STEP 3: Save indicator ── */}
+        <rect x="115" y="260" width="170" height="30" rx="6" fill="#009B3A" opacity="0.7" />
+        <text x="200" y="279" fill="white" fontSize="11" fontWeight="bold" fontFamily="Arial, sans-serif" textAnchor="middle">Save Changes</text>
+
+        {/* Step 3 label */}
+        <rect x="20" y="268" width="80" height="18" rx="4" fill="#FFD700" opacity="0.15" />
+        <text x="60" y="280" fill="#FFD700" fontSize="8" fontWeight="bold" fontFamily="Arial, sans-serif" textAnchor="middle">{step3}</text>
+
+        {/* Defs */}
+        <defs>
+          <linearGradient id="bannerGrad" x1="0" y1="0" x2="400" y2="70">
+            <stop offset="0%" stopColor="#1DB5D4" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="#6B3FA0" stopOpacity="0.3" />
+          </linearGradient>
+          <marker id="arrowRed" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+            <path d="M0,0 L8,4 L0,8" fill="#FF6B6B" />
+          </marker>
+          <marker id="arrowGreen" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+            <path d="M0,0 L8,4 L0,8" fill="#00D44B" />
+          </marker>
+        </defs>
+      </svg>
+    </div>
   )
 }
 

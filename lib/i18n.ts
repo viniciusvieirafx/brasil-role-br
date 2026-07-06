@@ -20,6 +20,8 @@ export type Translations = {
     generateBtn: string; generating: string
     bioTitle: string; bioDesc: string
     copyBtn: string; copied: string; bioHint: string
+    openVRChat: string; autoCheckMsg: string; autoCheckFound: string
+    tutorialStep1: string; tutorialStep2: string; tutorialStep3: string
     verifyBtn: string; verifying: string; changeUser: string
     doneTitle: string; doneDesc_before: string; doneDesc_bold: string; doneDesc_after: string; doneHint: string
     alreadyTitle: string; alreadyDesc: string; alreadyVipBtn: string
@@ -123,7 +125,13 @@ export const translations: Record<Lang, Translations> = {
       bioDesc: 'Abra o VRChat, vá no seu perfil e cole este código no início da bio',
       copyBtn: '📋 Copiar código',
       copied: '✓ Copiado!',
-      bioHint: 'Depois de salvar o perfil no VRChat, clique em verificar. Pode remover o código após a verificação.',
+      bioHint: 'Depois de salvar o perfil no VRChat, a verificação acontece automaticamente. Pode remover o código após a verificação.',
+      openVRChat: '🔗 Abrir meu perfil no VRChat',
+      autoCheckMsg: 'Verificando automaticamente...',
+      autoCheckFound: 'Código detectado!',
+      tutorialStep1: '1. Clique em "Edit Profile"',
+      tutorialStep2: '2. Cole o código na seção "About Me"',
+      tutorialStep3: '3. Salve e aguarde aqui',
       verifyBtn: 'Já adicionei, verificar!',
       verifying: 'Verificando...',
       changeUser: 'Trocar usuário',
@@ -282,7 +290,13 @@ export const translations: Record<Lang, Translations> = {
       bioDesc: 'Open VRChat, go to your profile and paste this code at the beginning of your bio',
       copyBtn: '📋 Copy code',
       copied: '✓ Copied!',
-      bioHint: 'After saving your VRChat profile, click verify. You may remove the code after verification.',
+      bioHint: 'After saving your VRChat profile, verification happens automatically. You may remove the code after verification.',
+      openVRChat: '🔗 Open my VRChat profile',
+      autoCheckMsg: 'Checking automatically...',
+      autoCheckFound: 'Code detected!',
+      tutorialStep1: '1. Click "Edit Profile"',
+      tutorialStep2: '2. Paste the code in the "About Me" section',
+      tutorialStep3: '3. Save and wait here',
       verifyBtn: "I've added it, verify!",
       verifying: 'Verifying...',
       changeUser: 'Change username',
@@ -441,7 +455,13 @@ export const translations: Record<Lang, Translations> = {
       bioDesc: 'Abre VRChat, ve a tu perfil y pega este código al inicio de tu bio',
       copyBtn: '📋 Copiar código',
       copied: '✓ ¡Copiado!',
-      bioHint: 'Después de guardar el perfil en VRChat, haz clic en verificar. Puedes eliminar el código después de la verificación.',
+      bioHint: 'Después de guardar el perfil en VRChat, la verificación ocurre automáticamente. Puedes eliminar el código después de la verificación.',
+      openVRChat: '🔗 Abrir mi perfil en VRChat',
+      autoCheckMsg: 'Verificando automáticamente...',
+      autoCheckFound: '¡Código detectado!',
+      tutorialStep1: '1. Haz clic en "Edit Profile"',
+      tutorialStep2: '2. Pega el código en la sección "About Me"',
+      tutorialStep3: '3. Guarda y espera aquí',
       verifyBtn: '¡Ya lo agregué, verificar!',
       verifying: 'Verificando...',
       changeUser: 'Cambiar usuario',
