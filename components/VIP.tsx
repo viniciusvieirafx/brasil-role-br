@@ -463,7 +463,7 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
                         giftMode === 'random' ? 'bg-purple-500/20 text-purple-400' : 'text-gray-500 hover:text-gray-300'
                       }`}
                     >
-                      🎲 {t.vip.giftRandom}
+                      🎁 {t.vip.giftRandom}
                     </button>
                   </div>
 
@@ -634,7 +634,7 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
                       {loading
                         ? t.vip.payBtnLoading
                         : isRandom
-                          ? `🎲 Gerar PIX — R$ ${(selectedTier.price * randomQty).toFixed(2)}`
+                          ? `🎁 Gerar PIX — R$ ${(selectedTier.price * randomQty).toFixed(2)}`
                           : isGift
                             ? `🎁 Gerar PIX — R$ ${selectedTier.price},00`
                             : `Gerar PIX — R$ ${selectedTier.price},00`}
@@ -687,7 +687,7 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
 
           {step === 'paid' && (
             <div className="text-center space-y-5 w-full">
-              <div className="text-7xl">{isRandom ? '🎲' : isGift ? '🎁' : '🎉'}</div>
+              <div className="text-7xl">{isRandom ? '🎁' : isGift ? '🎁' : '🎉'}</div>
               <h3 className={`text-3xl font-bold ${isRandom ? 'text-purple-400' : 'text-br-green'}`}>
                 {isRandom ? t.vip.giftRandomPaidTitle : isGift ? t.vip.giftPaidTitle : t.vip.paidTitle}
               </h3>

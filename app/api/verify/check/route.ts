@@ -105,7 +105,7 @@ export async function POST(_req: NextRequest) {
     sendDiscordNotification(discordUser, vrchatUser.displayName),
   ])
 
-  // Processa presentes pendentes (de sorteio aleatório)
+  // Processa presentes pendentes (de presente em massa)
   activatePendingGifts(discordUser.id).catch((e) =>
     console.error(`[verify] Erro ao ativar presentes pendentes para ${discordUser.id}:`, e),
   )
@@ -114,7 +114,7 @@ export async function POST(_req: NextRequest) {
   return NextResponse.json({ verified: true })
 }
 
-/* ── Ativar presentes pendentes de sorteio aleatório ── */
+/* ── Ativar presentes pendentes de presente em massa ── */
 
 const TIER_ROLES: Record<number, string | undefined> = {
   1: process.env.DISCORD_VIP_ROLE_ID,
@@ -152,7 +152,7 @@ async function activatePendingGifts(userId: string) {
 
     const tierName = TIER_NAMES[gift.tier] ?? 'VIP'
     await sendDiscordDMEmbed(userId, {
-      title: '🎲 Presente ativado!',
+      title: '🎁 Presente ativado!',
       description: `Você verificou sua conta e seu **${tierName}** (presente de **${gift.buyerName}**) foi ativado!\n\nVálido por 30 dias.`,
       color: TIER_COLORS[gift.tier] ?? 0xFFD700,
     })

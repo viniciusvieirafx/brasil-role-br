@@ -327,8 +327,8 @@ async function handleBulkRandomGift(tier: number, quantity: number, buyerId: str
 
       // DM pro membro
       await sendDiscordDMEmbed(memberId, {
-        title: '🎲 Você foi sorteado!',
-        description: `**${buyerName}** presenteou VIPs aleatórios e você foi um dos sorteados!\n\nSeu **${tierName}** já está ativo e vale por 30 dias.`,
+        title: '🎁 Você ganhou VIP!',
+        description: `**${buyerName}** fez um presente em massa e você foi um dos contemplados!\n\nSeu **${tierName}** já está ativo e vale por 30 dias.`,
         color: TIER_COLORS[tier] ?? 0xFFD700,
       })
     } else {
@@ -342,8 +342,8 @@ async function handleBulkRandomGift(tier: number, quantity: number, buyerId: str
 
       // DM pro membro avisando que precisa verificar
       await sendDiscordDMEmbed(memberId, {
-        title: '🎲 Você foi sorteado para ganhar VIP!',
-        description: `**${buyerName}** presenteou VIPs aleatórios e você foi um dos sorteados!\n\nPara receber seu **${tierName}**, você precisa verificar sua conta VRChat em **brasil-role-br.com**.\n\nApós verificar, seu VIP será ativado automaticamente!`,
+        title: '🎁 Você ganhou VIP!',
+        description: `**${buyerName}** fez um presente em massa e você foi um dos contemplados!\n\nPara receber seu **${tierName}**, você precisa verificar sua conta VRChat em **brasil-role-br.com**.\n\nApós verificar, seu VIP será ativado automaticamente!`,
         color: TIER_COLORS[tier] ?? 0xFFD700,
       })
     }
@@ -365,7 +365,7 @@ async function handleBulkRandomGift(tier: number, quantity: number, buyerId: str
   const fields = [
     { name: '🎁 Presenteador', value: `${buyerName} (<@${buyerId}>)`, inline: true },
     { name: '🏅 Plano', value: tierName, inline: true },
-    { name: '🎲 Quantidade', value: `${actualCount}/${quantity}`, inline: true },
+    { name: '📦 Quantidade', value: `${actualCount}/${quantity}`, inline: true },
     { name: '💰 Valor total', value: `R$ ${amount.toFixed(2)}`, inline: true },
     { name: '✅ Ativados', value: `${activatedCount}`, inline: true },
     { name: '⏳ Pendentes (não verificados)', value: `${pendingCount}`, inline: true },
@@ -379,7 +379,7 @@ async function handleBulkRandomGift(tier: number, quantity: number, buyerId: str
     },
     body: JSON.stringify({
       embeds: [{
-        title: `🎲 Presente Aleatório — ${actualCount}x ${tierName}`,
+        title: `🎁 Presente em Massa — ${actualCount}x ${tierName}`,
         color: tierColor,
         fields,
         footer: { text: 'Brasil Role BR · VIP' },
