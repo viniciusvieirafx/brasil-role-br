@@ -42,14 +42,15 @@ export async function GET() {
       return new Date(a.firstPaymentAt).getTime() - new Date(b.firstPaymentAt).getTime()
     })
 
-    // Busca nomes do Discord para os top 10
-    const topVips = vips.slice(0, 10)
-    const topVipsWithNames = await Promise.all(
-      topVips.map(async (v) => {
-        const name = await getDiscordDisplayName(v.discordId)
-        return { ...v, displayName: name }
-      }),
-    )
+    // Busca nomes do Discord — pega mais que 10 caso alguns tenham saído do servidor
+    const topVipCandidates = vips.slice(0, 20)
+    const topVipsWithNames: (typeof vips[0] & { displayName: string })[] = []
+    for (const v of topVipCandidates) {
+      if (topVipsWithNames.length >= 10) break
+      const name = await getDiscordDisplayName(v.discordId)
+      if (!name) continue // Membro saiu do servidor — não exibir
+      topVipsWithNames.push({ ...v, displayName: name })
+    }
 
     // ── Top Gifters ──
     const gifterResults = await Promise.all(gifterKeys.map((k) => kvGet(k)))
@@ -86,16 +87,16 @@ export async function GET() {
   }
 }
 
-async function getDiscordDisplayName(userId: string): Promise<string> {
+async function getDiscordDisplayName(userId: string): Promise<string | null> {
   try {
     const res = await fetch(
       `https://discord.com/api/v10/guilds/${process.env.DISCORD_GUILD_ID}/members/${userId}`,
       { headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` } },
     )
-    if (!res.ok) return userId
+    if (!res.ok) return null // Membro não está mais no servidor
     const member = await res.json()
-    return member?.nick ?? member?.user?.global_name ?? member?.user?.username ?? userId
+    return member?.nick ?? member?.user?.global_name ?? member?.user?.username ?? null
   } catch {
-    return userId
+    return null
   }
 }
