@@ -8,6 +8,7 @@ const groups = [
   { name: 'Caóticos Anônimos', image: '/grupos/CaoticosAnonimos.png', url: 'https://vrc.group/CAOTIC.9761' },
   { name: 'Star Wars Brasil', image: '/grupos/StarWarsBrasil.png', url: 'https://vrchat.com/home/group/grp_5c7d683c-96dd-446c-926e-dfd712c4923b' },
   { name: "Moon's Club", image: '/grupos/MoonsClub.png', url: 'https://vrchat.com/home/group/grp_382c5e60-54a6-4cf6-ba8e-a3a894f2ac34' },
+  { name: 'Guris do VRChat', image: '/grupos/GurisDoVRChat.png', url: 'https://vrchat.com/home/group/grp_0b84612c-ef64-4da5-bf79-d405b98b6d40' },
 ]
 
 export default function VerifiedGroups() {
