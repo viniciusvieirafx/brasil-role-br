@@ -12,6 +12,7 @@ import VIP from '@/components/VIP'
 import Sorteio from '@/components/Sorteio'
 import Gallery from '@/components/Gallery'
 import PatchNotes from '@/components/PatchNotes'
+import Contributors from '@/components/Contributors'
 import Contact from '@/components/Contact'
 import Footer from '@/components/Footer'
 
@@ -71,6 +72,7 @@ export default async function Home() {
         initialUser={discordUser}
         initialVerified={isVerified}
       />
+      <Contributors />
       <Contact />
       <Footer />
     </main>

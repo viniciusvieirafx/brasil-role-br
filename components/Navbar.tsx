@@ -28,6 +28,7 @@ export default function Navbar({ latestVersion }: NavbarProps) {
     { href: '#verificar',label: t.nav.verify,  badge: false, external: false },
     { href: '#vip',      label: t.nav.vip,     badge: false, external: false },
     { href: '#sorteio',  label: t.nav.raffle,  badge: false, external: false },
+    { href: '#contribuidores', label: t.nav.contributors, badge: false, external: false },
     { href: '/pets',     label: t.nav.pets,    badge: false, external: false },
     { href: '#contato',  label: t.nav.contact, badge: false, external: false },
   ]

@@ -1,7 +1,7 @@
 export type Lang = 'pt' | 'en' | 'es'
 
 export type Translations = {
-  nav: { home: string; about: string; team: string; vip: string; contact: string; updates: string; verify: string; raffle: string; pets: string }
+  nav: { home: string; about: string; team: string; vip: string; contact: string; updates: string; verify: string; raffle: string; pets: string; contributors: string }
   updates: { titleA: string; titleB: string; subtitle: string; latest: string; filterAll: string; empty: string }
   hero: { badge: string; desc: string; btnVip: string; scroll: string }
   gallery: { titleA: string; titleB: string; subtitle: string; btnVisit: string }
@@ -65,6 +65,11 @@ export type Translations = {
     advertiseTitle: string; advertiseDesc: string; advertiseLink: string
     socialTitle: string
   }
+  contributors: {
+    titleA: string; titleB: string; subtitle: string; loading: string; empty: string
+    vipTitle: string; vipDesc: string; noVips: string; daysLeft: string
+    gifterTitle: string; gifterDesc: string; noGifters: string
+  }
   verifiedGroups: { official: string; officialName: string; officialCta: string; verified: string }
   footer: { rights: string; disclaimer: string }
 }
@@ -79,6 +84,7 @@ export const translations: Record<Lang, Translations> = {
       verify: 'Verificar',
       vip: 'VIP',
       raffle: 'Sorteio',
+      contributors: 'Contribuidores',
       pets: 'Bichinhos',
       contact: 'Contato',
     },
@@ -253,6 +259,20 @@ export const translations: Record<Lang, Translations> = {
       advertiseLink: 'Falar com Admin →',
       socialTitle: 'Redes Sociais',
     },
+    contributors: {
+      titleA: 'CONTRIBUIDORES',
+      titleB: 'HONORÁRIOS',
+      subtitle: 'Os membros que mais apoiam e presenteiam na comunidade',
+      loading: 'Carregando...',
+      empty: 'Nenhum contribuidor ainda — seja o primeiro!',
+      vipTitle: 'Top VIPs',
+      vipDesc: 'Assinantes com mais tempo de VIP ativo',
+      noVips: 'Nenhum VIP ativo no momento',
+      daysLeft: 'dias restantes',
+      gifterTitle: 'Top Presenteadores',
+      gifterDesc: 'Quem mais presenteou VIP na comunidade — destaque no mapa!',
+      noGifters: 'Nenhum presente dado ainda',
+    },
     verifiedGroups: {
       official: 'Grupo Oficial',
       officialName: 'Grupo oficial Brasil Role BR',
@@ -274,6 +294,7 @@ export const translations: Record<Lang, Translations> = {
       verify: 'Verify',
       vip: 'VIP',
       raffle: 'Raffle',
+      contributors: 'Contributors',
       pets: 'Pets',
       contact: 'Contact',
     },
@@ -445,6 +466,20 @@ export const translations: Record<Lang, Translations> = {
       advertiseLink: 'Talk to Admin →',
       socialTitle: 'Social Media',
     },
+    contributors: {
+      titleA: 'HONORARY',
+      titleB: 'CONTRIBUTORS',
+      subtitle: 'The members who support and gift the most in the community',
+      loading: 'Loading...',
+      empty: 'No contributors yet — be the first!',
+      vipTitle: 'Top VIPs',
+      vipDesc: 'Subscribers with the most active VIP time',
+      noVips: 'No active VIPs at the moment',
+      daysLeft: 'days left',
+      gifterTitle: 'Top Gifters',
+      gifterDesc: 'Who gifted the most VIP in the community — featured on the map!',
+      noGifters: 'No gifts given yet',
+    },
     verifiedGroups: {
       official: 'Official Group',
       officialName: 'Brasil Role BR official group',
@@ -466,6 +501,7 @@ export const translations: Record<Lang, Translations> = {
       verify: 'Verificar',
       vip: 'VIP',
       raffle: 'Sorteo',
+      contributors: 'Colaboradores',
       pets: 'Mascotas',
       contact: 'Contacto',
     },
@@ -636,6 +672,20 @@ export const translations: Record<Lang, Translations> = {
       advertiseDesc: '¿Quieres promocionar tu proyecto a nuestra comunidad? ¡Envíanos un email!',
       advertiseLink: 'Hablar con Admin →',
       socialTitle: 'Redes Sociales',
+    },
+    contributors: {
+      titleA: 'COLABORADORES',
+      titleB: 'HONORARIOS',
+      subtitle: 'Los miembros que más apoyan y regalan en la comunidad',
+      loading: 'Cargando...',
+      empty: 'Ningún colaborador aún — ¡sé el primero!',
+      vipTitle: 'Top VIPs',
+      vipDesc: 'Suscriptores con más tiempo de VIP activo',
+      noVips: 'Ningún VIP activo en este momento',
+      daysLeft: 'días restantes',
+      gifterTitle: 'Top Regaladores',
+      gifterDesc: '¡Quiénes más regalaron VIP en la comunidad — destaque en el mapa!',
+      noGifters: 'Ningún regalo dado aún',
     },
     verifiedGroups: {
       official: 'Grupo Oficial',
