@@ -11,30 +11,53 @@ export async function GET() {
   }
 
   try {
-    // Busca vip-months e gifters em paralelo
-    const [monthsKeys, gifterKeys] = await Promise.all([
+    // Busca vip-months, vip (ativos) e gifters em paralelo
+    const [monthsKeys, vipKeys, gifterKeys] = await Promise.all([
       kvKeys('vip-months:*'),
+      kvKeys('vip:*'),
       kvKeys('gifter-points:*'),
     ])
 
     // ── Top VIPs (quem acumulou mais meses de assinatura) ──
-    const monthsResults = await Promise.all(monthsKeys.map((k) => kvGet(k)))
-    const monthsDiscordIds = monthsKeys.map((k) => k.replace('vip-months:', ''))
+    const [monthsResults, vipResults] = await Promise.all([
+      Promise.all(monthsKeys.map((k) => kvGet(k))),
+      Promise.all(vipKeys.map((k) => kvGet(k))),
+    ])
 
-    const vips: { discordId: string; totalMonths: number; firstPaymentAt: string }[] = []
-
+    // Mapa de meses acumulados por ID (do vip-months)
+    const monthsMap = new Map<string, { totalMonths: number; firstPaymentAt: string }>()
     for (let i = 0; i < monthsKeys.length; i++) {
       const raw = monthsResults[i]
       if (!raw) continue
       const data = JSON.parse(raw)
       if (data.totalMonths > 0) {
-        vips.push({
-          discordId: monthsDiscordIds[i],
-          totalMonths: data.totalMonths,
-          firstPaymentAt: data.firstPaymentAt,
-        })
+        const id = monthsKeys[i].replace('vip-months:', '')
+        monthsMap.set(id, { totalMonths: data.totalMonths, firstPaymentAt: data.firstPaymentAt })
       }
     }
+
+    // Merge com VIPs ativos que ainda não têm vip-months (baseline de 1 mês)
+    const now = new Date()
+    for (let i = 0; i < vipKeys.length; i++) {
+      const raw = vipResults[i]
+      if (!raw) continue
+      const data = JSON.parse(raw)
+      if (data.vitalicio) continue // VIP vitalício não entra
+      if (!data.expiresAt) continue
+      const expiry = new Date(data.expiresAt)
+      if (expiry <= now) continue // VIP expirado
+
+      const id = vipKeys[i].replace('vip:', '')
+      if (!monthsMap.has(id)) {
+        monthsMap.set(id, { totalMonths: 1, firstPaymentAt: now.toISOString() })
+      }
+    }
+
+    const vips = Array.from(monthsMap.entries()).map(([discordId, data]) => ({
+      discordId,
+      totalMonths: data.totalMonths,
+      firstPaymentAt: data.firstPaymentAt,
+    }))
 
     // Ordena: mais meses primeiro, empate por quem assinou primeiro
     vips.sort((a, b) => {
