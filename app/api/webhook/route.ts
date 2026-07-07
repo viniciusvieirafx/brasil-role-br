@@ -219,7 +219,7 @@ async function handlePayment(paymentId: string | undefined) {
   // Notificação no canal
   await notifyChannel(recipientId, tier, payment.transaction_amount, payment.payment_method_id, expiresStr, buyerId)
 
-  // Se for presente, DM pro destinatário
+  // Se for presente, DM pro destinatário + salvar pontos do presenteador
   if (buyerId) {
     const buyerName = await getDisplayName(buyerId)
     const tierName = TIER_NAMES[tier] ?? 'VIP'
@@ -228,6 +228,16 @@ async function handlePayment(paymentId: string | undefined) {
       description: `**${buyerName}** te presenteou com **${tierName}** no Brasil Role BR!\n\nSeu cargo VIP já está ativo no Discord e vale por 30 dias.`,
       color: TIER_COLORS[tier] ?? 0xFFD700,
     })
+
+    // Acumula pontos do presenteador para ranking
+    const points = tier // Tier 1 = 1pt, Tier 2 = 2pt, Tier 3 = 3pt
+    const gifterKey = `gifter-points:${buyerId}`
+    const existingGifter = await kvGet(gifterKey)
+    const gifterData = existingGifter ? JSON.parse(existingGifter) : { displayName: buyerName, points: 0, firstGiftAt: new Date().toISOString() }
+    gifterData.displayName = buyerName // Atualiza nome caso tenha mudado
+    gifterData.points += points
+    await kvSet(gifterKey, JSON.stringify(gifterData))
+    console.log(`[webhook] Gifter ${buyerName} (${buyerId}) +${points}pts = ${gifterData.points}pts total`)
   }
 
   console.log(`[webhook] VIP ativado: ${recipientId} tier ${tier} até ${expiresStr}${buyerId ? ` (presente de ${buyerId})` : ''}`)
