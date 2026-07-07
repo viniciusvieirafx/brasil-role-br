@@ -141,9 +141,16 @@ async function notifyChannel(
 
 // Normal:       discord-{userId}-t{tier}
 // Gift:         discord-{recipientId}-t{tier}-gf{buyerId}
+// Bulk random:  discord-BULK-t{tier}-q{quantity}-gf{buyerId}
 // Subscription: discord-{userId}-t{tier}-sub
 // Legacy:       discord-{userId}
 function parseRef(ref: string) {
+  // Bulk random gift
+  const bulkMatch = ref.match(/^discord-BULK-t(\d+)-q(\d+)-gf(\d+)$/)
+  if (bulkMatch) {
+    return { recipientId: undefined, tier: parseInt(bulkMatch[1]), quantity: parseInt(bulkMatch[2]), buyerId: bulkMatch[3], type: 'bulk' as const }
+  }
+
   // Gift
   const giftMatch = ref.match(/^discord-(\d+)-t(\d+)-gf(\d+)$/)
   if (giftMatch) {
@@ -212,7 +219,13 @@ async function handlePayment(paymentId: string | undefined) {
   const parsed = parseRef(ref)
   if (!parsed) return NextResponse.json({ ok: true })
 
-  const { recipientId, tier, buyerId } = parsed
+  // Bulk random gift — distribui VIPs para membros aleatórios
+  if (parsed.type === 'bulk') {
+    return handleBulkRandomGift(parsed.tier, parsed.quantity!, parsed.buyerId!, payment.transaction_amount)
+  }
+
+  const { tier, buyerId } = parsed
+  const recipientId = parsed.recipientId!
   const roleId = await addVipRole(recipientId, tier)
   const expiresStr = await saveVipExpiry(recipientId, tier, roleId)
 
@@ -244,6 +257,141 @@ async function handlePayment(paymentId: string | undefined) {
   return NextResponse.json({ ok: true })
 }
 
+/* ── Presente aleatório em massa ──────────────────────── */
+
+async function getAllGuildMembers(): Promise<any[]> {
+  const guildId = process.env.DISCORD_GUILD_ID!
+  const botToken = process.env.DISCORD_BOT_TOKEN!
+  const allMembers: any[] = []
+  let after = '0'
+
+  while (true) {
+    const res = await fetch(
+      `https://discord.com/api/v10/guilds/${guildId}/members?limit=1000&after=${after}`,
+      { headers: { Authorization: `Bot ${botToken}` } },
+    )
+    if (!res.ok) break
+    const members: any[] = await res.json()
+    if (!Array.isArray(members) || members.length === 0) break
+    allMembers.push(...members)
+    if (members.length < 1000) break
+    after = members[members.length - 1].user.id
+  }
+
+  return allMembers
+}
+
+async function handleBulkRandomGift(tier: number, quantity: number, buyerId: string, amount: number) {
+  const vipRoleIds = [
+    process.env.DISCORD_VIP_ROLE_ID,
+    process.env.DISCORD_VIP2_ROLE_ID,
+    process.env.DISCORD_VIP3_ROLE_ID,
+  ].filter(Boolean) as string[]
+
+  const verifiedRoleId = process.env.DISCORD_VERIFIED_ROLE_ID!
+  const buyerName = await getDisplayName(buyerId)
+
+  // Busca todos os membros do servidor
+  const allMembers = await getAllGuildMembers()
+
+  // Filtra: não-bot, sem VIP, não é o comprador
+  const eligible = allMembers.filter((m) => {
+    if (m.user?.bot) return false
+    if (m.user?.id === buyerId) return false
+    if (!Array.isArray(m.roles)) return false
+    // Não tem nenhum cargo VIP
+    return !m.roles.some((r: string) => vipRoleIds.includes(r))
+  })
+
+  // Shuffle Fisher-Yates e pega os primeiros N
+  for (let i = eligible.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[eligible[i], eligible[j]] = [eligible[j], eligible[i]]
+  }
+  const selected = eligible.slice(0, quantity)
+  const actualCount = selected.length
+
+  const tierName = TIER_NAMES[tier] ?? `VIP Tier ${tier}`
+  let activatedCount = 0
+  let pendingCount = 0
+
+  for (const member of selected) {
+    const memberId = member.user.id
+    const isVerified = Array.isArray(member.roles) && member.roles.includes(verifiedRoleId)
+
+    if (isVerified) {
+      // Ativa VIP imediatamente
+      const roleId = await addVipRole(memberId, tier)
+      await saveVipExpiry(memberId, tier, roleId)
+      activatedCount++
+
+      // DM pro membro
+      await sendDiscordDMEmbed(memberId, {
+        title: '🎲 Você foi sorteado!',
+        description: `**${buyerName}** presenteou VIPs aleatórios e você foi um dos sorteados!\n\nSeu **${tierName}** já está ativo e vale por 30 dias.`,
+        color: TIER_COLORS[tier] ?? 0xFFD700,
+      })
+    } else {
+      // Salva presente pendente no KV — será ativado quando verificar
+      const pendingKey = `pending-gifts:${memberId}`
+      const existingRaw = await kvGet(pendingKey)
+      const existingGifts = existingRaw ? JSON.parse(existingRaw) : []
+      existingGifts.push({ tier, buyerId, buyerName, createdAt: new Date().toISOString() })
+      await kvSet(pendingKey, JSON.stringify(existingGifts))
+      pendingCount++
+
+      // DM pro membro avisando que precisa verificar
+      await sendDiscordDMEmbed(memberId, {
+        title: '🎲 Você foi sorteado para ganhar VIP!',
+        description: `**${buyerName}** presenteou VIPs aleatórios e você foi um dos sorteados!\n\nPara receber seu **${tierName}**, você precisa verificar sua conta VRChat em **brasil-role-br.com**.\n\nApós verificar, seu VIP será ativado automaticamente!`,
+        color: TIER_COLORS[tier] ?? 0xFFD700,
+      })
+    }
+  }
+
+  // Acumula pontos do presenteador (pontos = tier * quantidade real)
+  const totalPoints = tier * actualCount
+  if (totalPoints > 0) {
+    const gifterKey = `gifter-points:${buyerId}`
+    const existingGifter = await kvGet(gifterKey)
+    const gifterData = existingGifter ? JSON.parse(existingGifter) : { displayName: buyerName, points: 0, firstGiftAt: new Date().toISOString() }
+    gifterData.displayName = buyerName
+    gifterData.points += totalPoints
+    await kvSet(gifterKey, JSON.stringify(gifterData))
+  }
+
+  // Notificação no canal
+  const tierColor = TIER_COLORS[tier] ?? 0xFFD700
+  const fields = [
+    { name: '🎁 Presenteador', value: `${buyerName} (<@${buyerId}>)`, inline: true },
+    { name: '🏅 Plano', value: tierName, inline: true },
+    { name: '🎲 Quantidade', value: `${actualCount}/${quantity}`, inline: true },
+    { name: '💰 Valor total', value: `R$ ${amount.toFixed(2)}`, inline: true },
+    { name: '✅ Ativados', value: `${activatedCount}`, inline: true },
+    { name: '⏳ Pendentes (não verificados)', value: `${pendingCount}`, inline: true },
+  ]
+
+  await fetch(`https://discord.com/api/v10/channels/${NOTIFY_CHANNEL}/messages`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      embeds: [{
+        title: `🎲 Presente Aleatório — ${actualCount}x ${tierName}`,
+        color: tierColor,
+        fields,
+        footer: { text: 'Brasil Role BR · VIP' },
+        timestamp: new Date().toISOString(),
+      }],
+    }),
+  })
+
+  console.log(`[webhook] Bulk gift: ${buyerName} (${buyerId}) presenteou ${actualCount}x tier ${tier} (${activatedCount} ativados, ${pendingCount} pendentes)`)
+  return NextResponse.json({ ok: true })
+}
+
 /* ── Status de assinatura (preapproval) ──────────────── */
 
 async function handleSubscriptionStatus(preapprovalId: string | undefined) {
@@ -257,7 +405,8 @@ async function handleSubscriptionStatus(preapprovalId: string | undefined) {
   const parsed = parseRef(sub.external_reference ?? '')
   if (!parsed) return NextResponse.json({ ok: true })
 
-  const { recipientId, tier } = parsed
+  const recipientId = parsed.recipientId!
+  const { tier } = parsed
 
   // Atualiza status no KV
   const existingRaw = await kvGet(`sub:${recipientId}`)
@@ -322,7 +471,8 @@ async function handleSubscriptionPayment(authorizedPaymentId: string | undefined
   const parsed = parseRef(sub.external_reference ?? '')
   if (!parsed) return NextResponse.json({ ok: true })
 
-  const { recipientId, tier } = parsed
+  const recipientId = parsed.recipientId!
+  const { tier } = parsed
   const tierName = TIER_NAMES[tier] ?? 'VIP'
 
   // Pagamento aprovado — renova VIP

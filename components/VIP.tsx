@@ -21,7 +21,7 @@ interface GiftTarget {
 
 type Step = 'login' | 'needsVerify' | 'selectTier' | 'waiting' | 'paid' | 'subResult'
 type PayMode = 'pix' | 'subscription'
-type GiftMode = 'self' | 'gift'
+type GiftMode = 'self' | 'gift' | 'random'
 
 interface TierInfo {
   tier: 1 | 2 | 3
@@ -123,6 +123,7 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
   const [giftResults, setGiftResults] = useState<GiftTarget[]>([])
   const [giftTarget, setGiftTarget] = useState<GiftTarget | null>(null)
   const [giftSearching, setGiftSearching] = useState(false)
+  const [randomQty, setRandomQty] = useState(1)
 
   // Subscription state
   const [payMode, setPayMode] = useState<PayMode>('pix')
@@ -188,6 +189,7 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
   const handleCreatePayment = async () => {
     if (!selectedTier) return
     if (giftMode === 'gift' && !giftTarget) return
+    if (giftMode === 'random' && (randomQty < 1 || randomQty > 50)) return
 
     setLoading(true)
     setErrorMsg('')
@@ -199,6 +201,8 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
         body: JSON.stringify({
           tier: selectedTier.tier,
           giftToId: giftMode === 'gift' ? giftTarget?.id : undefined,
+          randomGift: giftMode === 'random' ? true : undefined,
+          quantity: giftMode === 'random' ? randomQty : undefined,
         }),
       })
       const data = await res.json()
@@ -276,6 +280,7 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
     : null
 
   const isGift = giftMode === 'gift'
+  const isRandom = giftMode === 'random'
 
   return (
     <section id="vip" className="py-24 bg-br-dark2">
@@ -434,10 +439,10 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
                   </div>
                   <p className={`font-bold text-lg ${selectedTier.color}`}>{selectedTier.name}</p>
 
-                  {/* ── Toggle: Para mim / Presentear ── */}
+                  {/* ── Toggle: Para mim / Presentear / Sortear ── */}
                   <div className="flex gap-1 bg-br-dark rounded-xl p-1">
                     <button
-                      onClick={() => { setGiftMode('self'); setGiftTarget(null); setGiftSearch(''); setErrorMsg('') }}
+                      onClick={() => { setGiftMode('self'); setGiftTarget(null); setGiftSearch(''); setRandomQty(1); setErrorMsg('') }}
                       className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${
                         giftMode === 'self' ? 'bg-br-green/20 text-br-green' : 'text-gray-500 hover:text-gray-300'
                       }`}
@@ -445,12 +450,20 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
                       {t.vip.giftForMe}
                     </button>
                     <button
-                      onClick={() => { setGiftMode('gift'); setErrorMsg('') }}
+                      onClick={() => { setGiftMode('gift'); setRandomQty(1); setErrorMsg('') }}
                       className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${
                         giftMode === 'gift' ? 'bg-br-yellow/20 text-br-yellow' : 'text-gray-500 hover:text-gray-300'
                       }`}
                     >
                       🎁 {t.vip.giftForOther}
+                    </button>
+                    <button
+                      onClick={() => { setGiftMode('random'); setGiftTarget(null); setGiftSearch(''); setErrorMsg('') }}
+                      className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${
+                        giftMode === 'random' ? 'bg-purple-500/20 text-purple-400' : 'text-gray-500 hover:text-gray-300'
+                      }`}
+                    >
+                      🎲 {t.vip.giftRandom}
                     </button>
                   </div>
 
@@ -527,8 +540,46 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
                     </div>
                   )}
 
+                  {/* ── Random gift: quantity selector ── */}
+                  {giftMode === 'random' && (
+                    <div className="space-y-3">
+                      <p className="text-gray-400 text-sm">{t.vip.giftRandomDesc}</p>
+                      <div className="flex items-center gap-3">
+                        <label className="text-gray-300 text-sm font-semibold">{t.vip.giftRandomQty}:</label>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setRandomQty(q => Math.max(1, q - 1))}
+                            className="w-8 h-8 rounded-lg bg-br-dark border border-white/10 text-white font-bold hover:bg-white/10 transition-colors"
+                          >
+                            -
+                          </button>
+                          <input
+                            type="number"
+                            min={1}
+                            max={50}
+                            value={randomQty}
+                            onChange={e => setRandomQty(Math.max(1, Math.min(50, parseInt(e.target.value) || 1)))}
+                            className="w-16 text-center bg-br-dark border border-white/10 rounded-lg py-1.5 text-white font-bold focus:outline-none focus:border-purple-400 text-sm"
+                          />
+                          <button
+                            onClick={() => setRandomQty(q => Math.min(50, q + 1))}
+                            className="w-8 h-8 rounded-lg bg-br-dark border border-white/10 text-white font-bold hover:bg-white/10 transition-colors"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                      <p className="text-gray-500 text-xs">{t.vip.giftRandomMax}</p>
+                      <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-3 text-center">
+                        <p className="text-purple-300 text-sm font-bold">
+                          {randomQty}x {selectedTier.name} = R$ {(selectedTier.price * randomQty).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* ── Toggle: PIX / Assinatura ── */}
-                  {!isGift && (
+                  {giftMode === 'self' && (
                     <div className="flex gap-1 bg-br-dark rounded-xl p-1">
                       <button
                         onClick={() => { setPayMode('pix'); setErrorMsg('') }}
@@ -550,7 +601,7 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
                   )}
 
                   {/* ── Subscription: email input ── */}
-                  {payMode === 'subscription' && !isGift && (
+                  {payMode === 'subscription' && giftMode === 'self' && (
                     <div className="space-y-3">
                       <p className="text-gray-400 text-xs">{t.vip.subDesc}</p>
                       <input
@@ -572,17 +623,21 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
                   )}
 
                   {/* ── Action button ── */}
-                  {payMode === 'pix' || isGift ? (
+                  {payMode === 'pix' || isGift || isRandom ? (
                     <button
                       onClick={handleCreatePayment}
-                      disabled={loading || (isGift && !giftTarget)}
-                      className="bg-br-green text-white font-bold px-8 py-4 rounded-xl hover:brightness-110 transition-all w-full text-lg disabled:opacity-50 disabled:cursor-not-allowed glow-green"
+                      disabled={loading || (isGift && !giftTarget) || (isRandom && (randomQty < 1 || randomQty > 50))}
+                      className={`text-white font-bold px-8 py-4 rounded-xl hover:brightness-110 transition-all w-full text-lg disabled:opacity-50 disabled:cursor-not-allowed ${
+                        isRandom ? 'bg-purple-600' : 'bg-br-green glow-green'
+                      }`}
                     >
                       {loading
                         ? t.vip.payBtnLoading
-                        : isGift
-                          ? `🎁 Gerar PIX — R$ ${selectedTier.price},00`
-                          : `Gerar PIX — R$ ${selectedTier.price},00`}
+                        : isRandom
+                          ? `🎲 Gerar PIX — R$ ${(selectedTier.price * randomQty).toFixed(2)}`
+                          : isGift
+                            ? `🎁 Gerar PIX — R$ ${selectedTier.price},00`
+                            : `Gerar PIX — R$ ${selectedTier.price},00`}
                     </button>
                   ) : (
                     <button
@@ -595,7 +650,7 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
                   )}
 
                   <button
-                    onClick={() => { setSelectedTier(null); setErrorMsg(''); setGiftMode('self'); setPayMode('pix') }}
+                    onClick={() => { setSelectedTier(null); setErrorMsg(''); setGiftMode('self'); setPayMode('pix'); setRandomQty(1) }}
                     className="text-gray-500 hover:text-gray-300 text-sm transition-colors"
                   >
                     ← Trocar plano
@@ -632,11 +687,13 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
 
           {step === 'paid' && (
             <div className="text-center space-y-5 w-full">
-              <div className="text-7xl">{isGift ? '🎁' : '🎉'}</div>
-              <h3 className="text-3xl font-bold text-br-green">
-                {isGift ? t.vip.giftPaidTitle : t.vip.paidTitle}
+              <div className="text-7xl">{isRandom ? '🎲' : isGift ? '🎁' : '🎉'}</div>
+              <h3 className={`text-3xl font-bold ${isRandom ? 'text-purple-400' : 'text-br-green'}`}>
+                {isRandom ? t.vip.giftRandomPaidTitle : isGift ? t.vip.giftPaidTitle : t.vip.paidTitle}
               </h3>
-              {isGift ? (
+              {isRandom ? (
+                <p className="text-gray-300 text-lg">{t.vip.giftRandomPaidDesc}</p>
+              ) : isGift ? (
                 <p className="text-gray-300 text-lg">{t.vip.giftPaidDesc}</p>
               ) : (
                 <p className="text-gray-300 text-lg">

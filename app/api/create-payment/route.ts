@@ -28,7 +28,10 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const tier: number = [1, 2, 3].includes(body.tier) ? body.tier : 1
   const giftToId: string | undefined = body.giftToId?.trim()
-  const { amount, description } = TIER_CONFIG[tier]
+  const randomGift: boolean = body.randomGift === true
+  const quantity: number = randomGift ? Math.max(1, Math.min(50, parseInt(body.quantity) || 1)) : 1
+  const { amount: unitAmount, description } = TIER_CONFIG[tier]
+  const totalAmount = unitAmount * quantity
 
   // Se for presente, valida que o destinatário existe no servidor
   if (giftToId) {
@@ -45,19 +48,29 @@ export async function POST(req: NextRequest) {
   }
 
   // external_reference:
-  // Normal: discord-{userId}-t{tier}
-  // Gift:   discord-{recipientId}-t{tier}-gf{buyerId}
-  const targetId = giftToId ?? discordUser.id
-  const externalRef = giftToId
-    ? `discord-${targetId}-t${tier}-gf${discordUser.id}`
-    : `discord-${targetId}-t${tier}`
+  // Normal:      discord-{userId}-t{tier}
+  // Gift:        discord-{recipientId}-t{tier}-gf{buyerId}
+  // Bulk random: discord-BULK-t{tier}-q{quantity}-gf{buyerId}
+  let externalRef: string
+  let idempotencyTarget: string
 
-  const idempotencyKey = `brb-${targetId}-t${tier}-${Date.now()}`
+  if (randomGift) {
+    externalRef = `discord-BULK-t${tier}-q${quantity}-gf${discordUser.id}`
+    idempotencyTarget = `BULK-q${quantity}`
+  } else if (giftToId) {
+    externalRef = `discord-${giftToId}-t${tier}-gf${discordUser.id}`
+    idempotencyTarget = giftToId
+  } else {
+    externalRef = `discord-${discordUser.id}-t${tier}`
+    idempotencyTarget = discordUser.id
+  }
+
+  const idempotencyKey = `brb-${idempotencyTarget}-t${tier}-${Date.now()}`
 
   const host = req.headers.get('host') ?? 'brasil-role-br.com'
   const baseUrl = `https://${host}`
 
-  const giftLabel = giftToId ? ' (Presente)' : ''
+  const giftLabel = randomGift ? ` (${quantity}x Presente Aleatório)` : giftToId ? ' (Presente)' : ''
 
   const res = await fetch('https://api.mercadopago.com/v1/payments', {
     method: 'POST',
@@ -67,7 +80,7 @@ export async function POST(req: NextRequest) {
       'X-Idempotency-Key': idempotencyKey,
     },
     body: JSON.stringify({
-      transaction_amount: amount,
+      transaction_amount: totalAmount,
       description: description + giftLabel,
       payment_method_id: 'pix',
       payer: { email: 'pagamento@brasil-role-br.com' },

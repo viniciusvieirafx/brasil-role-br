@@ -44,9 +44,11 @@ export type Translations = {
     copyPix: string; copiedPix: string; checking: string
     paidTitle: string; paidDesc_before: string; paidDesc_after: string; paidHint: string
     // Gift
-    giftForMe: string; giftForOther: string
+    giftForMe: string; giftForOther: string; giftRandom: string
     giftSearchPlaceholder: string; giftSearching: string; giftUserNotFound: string
     giftPaidTitle: string; giftPaidDesc: string
+    giftRandomDesc: string; giftRandomQty: string; giftRandomMax: string
+    giftRandomPaidTitle: string; giftRandomPaidDesc: string
     // Subscription
     payOnce: string; paySubscription: string
     subDesc: string; subEmailPlaceholder: string
@@ -211,11 +213,17 @@ export const translations: Record<Lang, Translations> = {
       // Gift
       giftForMe: 'Para mim',
       giftForOther: 'Presentear',
+      giftRandom: 'Sortear',
       giftSearchPlaceholder: 'Buscar pelo nome no Discord...',
       giftSearching: 'Buscando...',
       giftUserNotFound: 'Nenhum membro encontrado no servidor',
       giftPaidTitle: 'Presente enviado!',
       giftPaidDesc: 'O VIP foi ativado e o presenteado foi notificado no Discord!',
+      giftRandomDesc: 'Presenteie membros aleatórios do servidor que ainda não têm VIP!',
+      giftRandomQty: 'Quantidade',
+      giftRandomMax: 'Máximo 50 por compra',
+      giftRandomPaidTitle: 'Presentes sorteados!',
+      giftRandomPaidDesc: 'Os VIPs serão distribuídos para membros aleatórios e notificados no Discord!',
       // Subscription
       payOnce: 'PIX (único)',
       paySubscription: 'Assinatura (Cartão)',
@@ -399,11 +407,17 @@ export const translations: Record<Lang, Translations> = {
       paidHint: 'Valid for 30 days. To renew, come back here and pay again.',
       giftForMe: 'For me',
       giftForOther: 'Gift someone',
+      giftRandom: 'Raffle',
       giftSearchPlaceholder: 'Search by Discord name...',
       giftSearching: 'Searching...',
       giftUserNotFound: 'No member found in the server',
       giftPaidTitle: 'Gift sent!',
       giftPaidDesc: 'VIP has been activated and the recipient was notified on Discord!',
+      giftRandomDesc: 'Gift random server members who don\'t have VIP yet!',
+      giftRandomQty: 'Quantity',
+      giftRandomMax: 'Max 50 per purchase',
+      giftRandomPaidTitle: 'Gifts raffled!',
+      giftRandomPaidDesc: 'VIPs will be distributed to random members and notified on Discord!',
       payOnce: 'PIX (one-time)',
       paySubscription: 'Subscription (Card)',
       subDesc: 'Automatic monthly charge on credit card',
@@ -585,11 +599,17 @@ export const translations: Record<Lang, Translations> = {
       paidHint: 'Válido por 30 días. Para renovar, vuelve aquí y paga nuevamente.',
       giftForMe: 'Para mí',
       giftForOther: 'Regalar',
+      giftRandom: 'Sortear',
       giftSearchPlaceholder: 'Buscar por nombre en Discord...',
       giftSearching: 'Buscando...',
       giftUserNotFound: 'Ningún miembro encontrado en el servidor',
       giftPaidTitle: '¡Regalo enviado!',
       giftPaidDesc: '¡El VIP fue activado y el destinatario fue notificado en Discord!',
+      giftRandomDesc: '¡Regala VIP a miembros aleatorios del servidor que aún no lo tienen!',
+      giftRandomQty: 'Cantidad',
+      giftRandomMax: 'Máximo 50 por compra',
+      giftRandomPaidTitle: '¡Regalos sorteados!',
+      giftRandomPaidDesc: '¡Los VIPs serán distribuidos a miembros aleatorios y notificados en Discord!',
       payOnce: 'PIX (único)',
       paySubscription: 'Suscripción (Tarjeta)',
       subDesc: 'Cobro mensual automático en tarjeta de crédito',

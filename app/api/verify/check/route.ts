@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { kvGet, kvSet, kvDel } from '@/lib/kv'
+import { sendDiscordDMEmbed } from '@/lib/discord-dm'
 
 const NOTIFY_CHANNEL = '1480918950404423835'
 
@@ -103,6 +105,61 @@ export async function POST(_req: NextRequest) {
     sendDiscordNotification(discordUser, vrchatUser.displayName),
   ])
 
+  // Processa presentes pendentes (de sorteio aleatório)
+  activatePendingGifts(discordUser.id).catch((e) =>
+    console.error(`[verify] Erro ao ativar presentes pendentes para ${discordUser.id}:`, e),
+  )
+
   cookieStore.set('verify_data', '', { maxAge: 0, path: '/' })
   return NextResponse.json({ verified: true })
+}
+
+/* ── Ativar presentes pendentes de sorteio aleatório ── */
+
+const TIER_ROLES: Record<number, string | undefined> = {
+  1: process.env.DISCORD_VIP_ROLE_ID,
+  2: process.env.DISCORD_VIP2_ROLE_ID,
+  3: process.env.DISCORD_VIP3_ROLE_ID,
+}
+
+const TIER_NAMES: Record<number, string> = { 1: 'VIP Bronze', 2: 'VIP Prata', 3: 'VIP Ouro' }
+const TIER_COLORS: Record<number, number> = { 1: 0xCD7F32, 2: 0xC0C0C0, 3: 0xFFD700 }
+
+async function activatePendingGifts(userId: string) {
+  const pendingKey = `pending-gifts:${userId}`
+  const raw = await kvGet(pendingKey)
+  if (!raw) return
+
+  const gifts: { tier: number; buyerId: string; buyerName: string; createdAt: string }[] = JSON.parse(raw)
+  if (gifts.length === 0) return
+
+  for (const gift of gifts) {
+    const roleId = TIER_ROLES[gift.tier] ?? process.env.DISCORD_VIP_ROLE_ID!
+
+    // Adiciona cargo VIP
+    await fetch(
+      `https://discord.com/api/v10/guilds/${process.env.DISCORD_GUILD_ID}/members/${userId}/roles/${roleId}`,
+      { method: 'PUT', headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`, 'Content-Type': 'application/json' } },
+    )
+
+    // Salva expiração
+    const expiresAt = new Date()
+    expiresAt.setDate(expiresAt.getDate() + 30)
+    const expiresStr = expiresAt.toISOString().split('T')[0]
+    const existingVipRaw = await kvGet(`vip:${userId}`)
+    const existingVip = existingVipRaw ? JSON.parse(existingVipRaw) : {}
+    await kvSet(`vip:${userId}`, JSON.stringify({ ...existingVip, expiresAt: expiresStr, roleId, tier: gift.tier, optOut: false, ultimoAviso: undefined }))
+
+    const tierName = TIER_NAMES[gift.tier] ?? 'VIP'
+    await sendDiscordDMEmbed(userId, {
+      title: '🎲 Presente ativado!',
+      description: `Você verificou sua conta e seu **${tierName}** (presente de **${gift.buyerName}**) foi ativado!\n\nVálido por 30 dias.`,
+      color: TIER_COLORS[gift.tier] ?? 0xFFD700,
+    })
+
+    console.log(`[verify] Presente pendente ativado: ${userId} tier ${gift.tier} (de ${gift.buyerId})`)
+  }
+
+  // Remove presentes pendentes
+  await kvDel(pendingKey)
 }
