@@ -3,6 +3,7 @@ import { kvGet, kvSet } from '@/lib/kv'
 import { sendDiscordDMEmbed } from '@/lib/discord-dm'
 
 const NOTIFY_CHANNEL = '1480918950404423835'
+const ANNOUNCE_CHANNEL = '1480918969819992084'
 
 const TIER_NAMES: Record<number, string> = {
   1: 'VIP Bronze',
@@ -423,6 +424,20 @@ async function handleBulkRandomGift(tier: number, quantity: number, buyerId: str
         footer: { text: 'Brasil Role BR · VIP' },
         timestamp: new Date().toISOString(),
       }],
+    }),
+  })
+
+  // Anúncio público no canal de presentes
+  const winnerMentions = [...giftCounts.keys()].map((id) => `<@${id}>`).join(', ')
+  await fetch(`https://discord.com/api/v10/channels/${ANNOUNCE_CHANNEL}/messages`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      content: `🎁 **${buyerName}** presenteou o servidor com **${quantity}x ${tierName}**!\n\nOs ganhadores foram: ${winnerMentions}`,
+      allowed_mentions: { parse: ['users'] },
     }),
   })
 
