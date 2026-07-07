@@ -299,77 +299,103 @@ async function handleBulkRandomGift(tier: number, quantity: number, buyerId: str
     if (m.user?.bot) return false
     if (m.user?.id === buyerId) return false
     if (!Array.isArray(m.roles)) return false
-    // Não tem nenhum cargo VIP
     return !m.roles.some((r: string) => vipRoleIds.includes(r))
   })
 
-  // Shuffle Fisher-Yates e pega os primeiros N
+  if (eligible.length === 0) {
+    console.log(`[webhook] Bulk gift: nenhum membro elegível encontrado`)
+    return NextResponse.json({ ok: true })
+  }
+
+  // Shuffle Fisher-Yates
   for (let i = eligible.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
     ;[eligible[i], eligible[j]] = [eligible[j], eligible[i]]
   }
-  const selected = eligible.slice(0, quantity)
-  const actualCount = selected.length
+
+  // Distribui presentes round-robin — se quantity > eligible, membros ganham múltiplos (stacking)
+  const giftCounts = new Map<string, number>()
+  for (let i = 0; i < quantity; i++) {
+    const member = eligible[i % eligible.length]
+    const id = member.user.id
+    giftCounts.set(id, (giftCounts.get(id) || 0) + 1)
+  }
 
   const tierName = TIER_NAMES[tier] ?? `VIP Tier ${tier}`
   let activatedCount = 0
   let pendingCount = 0
+  const membersGifted = giftCounts.size
 
-  for (const member of selected) {
-    const memberId = member.user.id
+  for (const [memberId, count] of giftCounts) {
+    const member = eligible.find((m: any) => m.user.id === memberId)!
     const isVerified = Array.isArray(member.roles) && member.roles.includes(verifiedRoleId)
+    const totalDays = count * 30
+    const daysLabel = count > 1 ? `${totalDays} dias (${count}x 30 dias)` : '30 dias'
 
     if (isVerified) {
-      // Ativa VIP imediatamente
+      // Ativa VIP com dias acumulados
       const roleId = await addVipRole(memberId, tier)
-      await saveVipExpiry(memberId, tier, roleId)
+
+      // Calcula expiração: se já tem VIP ativo, soma a partir do vencimento atual
+      const existingRaw = await kvGet(`vip:${memberId}`)
+      const existing = existingRaw ? JSON.parse(existingRaw) : {}
+      const now = new Date()
+      const currentExpiry = existing.expiresAt ? new Date(existing.expiresAt) : now
+      const baseDate = currentExpiry > now ? currentExpiry : now
+      baseDate.setDate(baseDate.getDate() + totalDays)
+      const expiresStr = baseDate.toISOString().split('T')[0]
+
+      await kvSet(`vip:${memberId}`, JSON.stringify({
+        ...existing, expiresAt: expiresStr, roleId, tier, optOut: false, ultimoAviso: undefined,
+      }))
       activatedCount++
 
-      // DM pro membro
       await sendDiscordDMEmbed(memberId, {
         title: '🎁 Você ganhou VIP!',
-        description: `**${buyerName}** fez um presente em massa e você foi um dos contemplados!\n\nSeu **${tierName}** já está ativo e vale por 30 dias.`,
+        description: `**${buyerName}** fez um presente em massa e você foi um dos contemplados!\n\nSeu **${tierName}** já está ativo e vale por **${daysLabel}**.`,
         color: TIER_COLORS[tier] ?? 0xFFD700,
       })
     } else {
-      // Salva presente pendente no KV — será ativado quando verificar
+      // Salva presente pendente com a quantidade de meses
       const pendingKey = `pending-gifts:${memberId}`
       const existingRaw = await kvGet(pendingKey)
       const existingGifts = existingRaw ? JSON.parse(existingRaw) : []
-      existingGifts.push({ tier, buyerId, buyerName, createdAt: new Date().toISOString() })
+      existingGifts.push({ tier, buyerId, buyerName, count, createdAt: new Date().toISOString() })
       await kvSet(pendingKey, JSON.stringify(existingGifts))
       pendingCount++
 
-      // DM pro membro avisando que precisa verificar
       await sendDiscordDMEmbed(memberId, {
         title: '🎁 Você ganhou VIP!',
-        description: `**${buyerName}** fez um presente em massa e você foi um dos contemplados!\n\nPara receber seu **${tierName}**, você precisa verificar sua conta VRChat em **brasil-role-br.com**.\n\nApós verificar, seu VIP será ativado automaticamente!`,
+        description: `**${buyerName}** fez um presente em massa e você foi um dos contemplados!\n\nPara receber seu **${tierName}** (**${daysLabel}**), você precisa verificar sua conta VRChat em **brasil-role-br.com**.\n\nApós verificar, seu VIP será ativado automaticamente!`,
         color: TIER_COLORS[tier] ?? 0xFFD700,
       })
     }
   }
 
-  // Acumula pontos do presenteador (pontos = tier * quantidade real)
-  const totalPoints = tier * actualCount
-  if (totalPoints > 0) {
-    const gifterKey = `gifter-points:${buyerId}`
-    const existingGifter = await kvGet(gifterKey)
-    const gifterData = existingGifter ? JSON.parse(existingGifter) : { displayName: buyerName, points: 0, firstGiftAt: new Date().toISOString() }
-    gifterData.displayName = buyerName
-    gifterData.points += totalPoints
-    await kvSet(gifterKey, JSON.stringify(gifterData))
-  }
+  // Acumula pontos do presenteador (sempre quantity total, pois pagou por todos)
+  const totalPoints = tier * quantity
+  const gifterKey = `gifter-points:${buyerId}`
+  const existingGifter = await kvGet(gifterKey)
+  const gifterData = existingGifter ? JSON.parse(existingGifter) : { displayName: buyerName, points: 0, firstGiftAt: new Date().toISOString() }
+  gifterData.displayName = buyerName
+  gifterData.points += totalPoints
+  await kvSet(gifterKey, JSON.stringify(gifterData))
 
   // Notificação no canal
   const tierColor = TIER_COLORS[tier] ?? 0xFFD700
   const fields = [
     { name: '🎁 Presenteador', value: `${buyerName} (<@${buyerId}>)`, inline: true },
     { name: '🏅 Plano', value: tierName, inline: true },
-    { name: '📦 Quantidade', value: `${actualCount}/${quantity}`, inline: true },
+    { name: '📦 Presentes', value: `${quantity}`, inline: true },
+    { name: '👥 Membros contemplados', value: `${membersGifted}`, inline: true },
     { name: '💰 Valor total', value: `R$ ${amount.toFixed(2)}`, inline: true },
     { name: '✅ Ativados', value: `${activatedCount}`, inline: true },
     { name: '⏳ Pendentes (não verificados)', value: `${pendingCount}`, inline: true },
   ]
+
+  if (quantity > membersGifted) {
+    fields.push({ name: '🔄 Presentes acumulados', value: `${quantity - membersGifted} extras distribuídos entre os ${membersGifted} membros`, inline: false })
+  }
 
   await fetch(`https://discord.com/api/v10/channels/${NOTIFY_CHANNEL}/messages`, {
     method: 'POST',
@@ -379,7 +405,7 @@ async function handleBulkRandomGift(tier: number, quantity: number, buyerId: str
     },
     body: JSON.stringify({
       embeds: [{
-        title: `🎁 Presente em Massa — ${actualCount}x ${tierName}`,
+        title: `🎁 Presente em Massa — ${quantity}x ${tierName}`,
         color: tierColor,
         fields,
         footer: { text: 'Brasil Role BR · VIP' },
@@ -388,7 +414,7 @@ async function handleBulkRandomGift(tier: number, quantity: number, buyerId: str
     }),
   })
 
-  console.log(`[webhook] Bulk gift: ${buyerName} (${buyerId}) presenteou ${actualCount}x tier ${tier} (${activatedCount} ativados, ${pendingCount} pendentes)`)
+  console.log(`[webhook] Bulk gift: ${buyerName} (${buyerId}) presenteou ${quantity}x tier ${tier} para ${membersGifted} membros (${activatedCount} ativados, ${pendingCount} pendentes)`)
   return NextResponse.json({ ok: true })
 }
 

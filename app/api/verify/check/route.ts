@@ -130,10 +130,12 @@ async function activatePendingGifts(userId: string) {
   const raw = await kvGet(pendingKey)
   if (!raw) return
 
-  const gifts: { tier: number; buyerId: string; buyerName: string; createdAt: string }[] = JSON.parse(raw)
+  const gifts: { tier: number; buyerId: string; buyerName: string; count?: number; createdAt: string }[] = JSON.parse(raw)
   if (gifts.length === 0) return
 
   for (const gift of gifts) {
+    const giftCount = gift.count ?? 1
+    const totalDays = giftCount * 30
     const roleId = TIER_ROLES[gift.tier] ?? process.env.DISCORD_VIP_ROLE_ID!
 
     // Adiciona cargo VIP
@@ -142,22 +144,26 @@ async function activatePendingGifts(userId: string) {
       { method: 'PUT', headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`, 'Content-Type': 'application/json' } },
     )
 
-    // Salva expiração
-    const expiresAt = new Date()
-    expiresAt.setDate(expiresAt.getDate() + 30)
-    const expiresStr = expiresAt.toISOString().split('T')[0]
+    // Salva expiração com stacking — soma a partir do vencimento atual se ainda ativo
     const existingVipRaw = await kvGet(`vip:${userId}`)
     const existingVip = existingVipRaw ? JSON.parse(existingVipRaw) : {}
+    const now = new Date()
+    const currentExpiry = existingVip.expiresAt ? new Date(existingVip.expiresAt) : now
+    const baseDate = currentExpiry > now ? currentExpiry : now
+    baseDate.setDate(baseDate.getDate() + totalDays)
+    const expiresStr = baseDate.toISOString().split('T')[0]
+
     await kvSet(`vip:${userId}`, JSON.stringify({ ...existingVip, expiresAt: expiresStr, roleId, tier: gift.tier, optOut: false, ultimoAviso: undefined }))
 
     const tierName = TIER_NAMES[gift.tier] ?? 'VIP'
+    const daysLabel = giftCount > 1 ? `${totalDays} dias (${giftCount}x 30 dias)` : '30 dias'
     await sendDiscordDMEmbed(userId, {
       title: '🎁 Presente ativado!',
-      description: `Você verificou sua conta e seu **${tierName}** (presente de **${gift.buyerName}**) foi ativado!\n\nVálido por 30 dias.`,
+      description: `Você verificou sua conta e seu **${tierName}** (presente de **${gift.buyerName}**) foi ativado!\n\nVálido por **${daysLabel}**.`,
       color: TIER_COLORS[gift.tier] ?? 0xFFD700,
     })
 
-    console.log(`[verify] Presente pendente ativado: ${userId} tier ${gift.tier} (de ${gift.buyerId})`)
+    console.log(`[verify] Presente pendente ativado: ${userId} tier ${gift.tier} x${giftCount} (de ${gift.buyerId})`)
   }
 
   // Remove presentes pendentes
