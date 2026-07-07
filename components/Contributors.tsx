@@ -7,7 +7,7 @@ interface TopVip {
   displayName: string
   tier: number
   expiresAt: string
-  daysLeft: number
+  monthsLeft: number
 }
 
 interface TopGifter {
@@ -95,7 +95,7 @@ export default function Contributors() {
                             {vip.displayName}
                           </p>
                           <p className={`text-xs ${style.color}`}>
-                            {style.emoji} {style.name} — {vip.daysLeft} {t.contributors.daysLeft}
+                            {style.emoji} {style.name} — {vip.monthsLeft} {vip.monthsLeft === 1 ? t.contributors.monthLeft : t.contributors.monthsLeft}
                           </p>
                         </div>
                       </div>

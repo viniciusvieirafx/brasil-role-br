@@ -67,7 +67,7 @@ export type Translations = {
   }
   contributors: {
     titleA: string; titleB: string; subtitle: string; loading: string; empty: string
-    vipTitle: string; vipDesc: string; noVips: string; daysLeft: string
+    vipTitle: string; vipDesc: string; noVips: string; monthLeft: string; monthsLeft: string
     gifterTitle: string; gifterDesc: string; noGifters: string
   }
   verifiedGroups: { official: string; officialName: string; officialCta: string; verified: string }
@@ -268,7 +268,8 @@ export const translations: Record<Lang, Translations> = {
       vipTitle: 'Top VIPs',
       vipDesc: 'Assinantes com mais tempo de VIP ativo',
       noVips: 'Nenhum VIP ativo no momento',
-      daysLeft: 'dias restantes',
+      monthLeft: 'mês restante',
+      monthsLeft: 'meses restantes',
       gifterTitle: 'Top Presenteadores',
       gifterDesc: 'Quem mais presenteou VIP na comunidade — destaque no mapa!',
       noGifters: 'Nenhum presente dado ainda',
@@ -475,7 +476,8 @@ export const translations: Record<Lang, Translations> = {
       vipTitle: 'Top VIPs',
       vipDesc: 'Subscribers with the most active VIP time',
       noVips: 'No active VIPs at the moment',
-      daysLeft: 'days left',
+      monthLeft: 'month left',
+      monthsLeft: 'months left',
       gifterTitle: 'Top Gifters',
       gifterDesc: 'Who gifted the most VIP in the community — featured on the map!',
       noGifters: 'No gifts given yet',
@@ -682,7 +684,8 @@ export const translations: Record<Lang, Translations> = {
       vipTitle: 'Top VIPs',
       vipDesc: 'Suscriptores con más tiempo de VIP activo',
       noVips: 'Ningún VIP activo en este momento',
-      daysLeft: 'días restantes',
+      monthLeft: 'mes restante',
+      monthsLeft: 'meses restantes',
       gifterTitle: 'Top Regaladores',
       gifterDesc: '¡Quiénes más regalaron VIP en la comunidad — destaque en el mapa!',
       noGifters: 'Ningún regalo dado aún',

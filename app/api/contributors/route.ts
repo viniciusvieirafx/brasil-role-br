@@ -22,28 +22,30 @@ export async function GET() {
     const vipDiscordIds = vipKeys.map((k) => k.replace('vip:', ''))
 
     const now = new Date()
-    const vips: { discordId: string; tier: number; expiresAt: string; daysLeft: number }[] = []
+    const vips: { discordId: string; tier: number; expiresAt: string; monthsLeft: number }[] = []
 
     for (let i = 0; i < vipKeys.length; i++) {
       const raw = vipResults[i]
       if (!raw) continue
       const data = JSON.parse(raw)
       if (!data.expiresAt) continue
+      if (data.vitalicio) continue // VIP vitalício não entra no ranking
       const expiry = new Date(data.expiresAt)
       const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
       if (daysLeft <= 0) continue // VIP expirado
+      const monthsLeft = Math.round(daysLeft / 30 * 10) / 10 // 1 casa decimal
       vips.push({
         discordId: vipDiscordIds[i],
         tier: data.tier ?? 1,
         expiresAt: data.expiresAt,
-        daysLeft,
+        monthsLeft,
       })
     }
 
-    // Ordena: tier mais alto primeiro, depois mais dias restantes
+    // Ordena: tier mais alto primeiro, depois mais meses restantes
     vips.sort((a, b) => {
       if (b.tier !== a.tier) return b.tier - a.tier
-      return b.daysLeft - a.daysLeft
+      return b.monthsLeft - a.monthsLeft
     })
 
     // Busca nomes do Discord para os top 10 VIPs
