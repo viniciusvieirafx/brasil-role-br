@@ -233,7 +233,7 @@ export async function POST(req: NextRequest) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      content: `🎁 **${buyerName}** presenteou o servidor com **${quantity}x ${tierName}**!\n\nOs ganhadores foram: ${winnerMentions}`,
+      content: `🎁 <@${buyerId}> presenteou o servidor com **${quantity}x ${tierName}**!\n\nOs ganhadores foram: ${winnerMentions}`,
       allowed_mentions: { parse: ['users'] },
     }),
   })
