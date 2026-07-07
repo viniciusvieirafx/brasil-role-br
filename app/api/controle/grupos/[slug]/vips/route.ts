@@ -16,10 +16,13 @@ export async function POST(
   const grupo = await getGrupo(slug)
   if (!grupo) return NextResponse.json({ error: 'Grupo não encontrado' }, { status: 404 })
 
-  const { quantidade } = await req.json()
+  const { quantidade, tier } = await req.json()
   const qtd = Math.max(1, parseInt(quantidade) || 1)
-  grupo.vipsDisponiveis += qtd
+  const t = [1, 2, 3].includes(tier) ? tier : 1
+
+  grupo.vipsPorTier[t as 1 | 2 | 3] += qtd
+  grupo.vipsDisponiveis = grupo.vipsPorTier[1] + grupo.vipsPorTier[2] + grupo.vipsPorTier[3]
   await saveGrupo(grupo)
 
-  return NextResponse.json({ ok: true, vipsDisponiveis: grupo.vipsDisponiveis })
+  return NextResponse.json({ ok: true, vipsPorTier: grupo.vipsPorTier, vipsDisponiveis: grupo.vipsDisponiveis })
 }

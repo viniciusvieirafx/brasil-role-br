@@ -1,11 +1,14 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 
+type VipsPorTier = { 1: number; 2: number; 3: number }
+
 type Grupo = {
   slug: string
   nome: string
   canalId: string | null
   vipsDisponiveis: number
+  vipsPorTier: VipsPorTier
 }
 
 type GrupoSorteio = {
@@ -64,9 +67,17 @@ export default function ControleGrupoPage() {
   const [erroSorteio, setErroSorteio] = useState('')
   const [loadingCriar, setLoadingCriar] = useState(false)
 
+  const [formPremioTier, setFormPremioTier] = useState(1)
+
   // Sortear
   const [loadingSortear, setLoadingSortear] = useState(false)
   const [erroSortear, setErroSortear] = useState('')
+
+  // Presentear VIP
+  const [giftName, setGiftName] = useState('')
+  const [giftTier, setGiftTier] = useState(1)
+  const [giftLoading, setGiftLoading] = useState(false)
+  const [giftMsg, setGiftMsg] = useState<{ type: 'success' | 'pending' | 'error'; text: string } | null>(null)
 
   // Invite URL
   const [inviteUrl, setInviteUrl] = useState<string | null>(null)
@@ -165,6 +176,7 @@ export default function ControleGrupoPage() {
         premioDias: 30,
         tipoPremio: formTipoPremio,
         descricaoPremio: formDescricaoPremio,
+        premioTier: formPremioTier,
       }),
     })
     const data = await res.json()
@@ -281,16 +293,31 @@ export default function ControleGrupoPage() {
 
       <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
 
-        {/* VIPs disponíveis */}
+        {/* VIPs disponíveis por tier */}
         <div className="bg-br-dark2 border border-white/10 rounded-2xl p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-white/40 text-xs uppercase tracking-wider mb-1">VIPs Disponíveis</p>
-              <p className={`text-3xl font-bold ${(grupo?.vipsDisponiveis ?? 0) > 0 ? 'text-br-yellow' : 'text-red-400'}`}>
-                {grupo?.vipsDisponiveis ?? 0}
-              </p>
-            </div>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-white/40 text-xs uppercase tracking-wider">VIPs Disponíveis</p>
             <div className="text-4xl">🎁</div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-black/20 rounded-xl p-3 text-center">
+              <p className={`text-2xl font-bold ${(grupo?.vipsPorTier?.[1] ?? 0) > 0 ? 'text-amber-600' : 'text-white/20'}`}>
+                {grupo?.vipsPorTier?.[1] ?? 0}
+              </p>
+              <p className="text-white/40 text-xs mt-0.5">Bronze</p>
+            </div>
+            <div className="bg-black/20 rounded-xl p-3 text-center">
+              <p className={`text-2xl font-bold ${(grupo?.vipsPorTier?.[2] ?? 0) > 0 ? 'text-gray-300' : 'text-white/20'}`}>
+                {grupo?.vipsPorTier?.[2] ?? 0}
+              </p>
+              <p className="text-white/40 text-xs mt-0.5">Prata</p>
+            </div>
+            <div className="bg-black/20 rounded-xl p-3 text-center">
+              <p className={`text-2xl font-bold ${(grupo?.vipsPorTier?.[3] ?? 0) > 0 ? 'text-yellow-400' : 'text-white/20'}`}>
+                {grupo?.vipsPorTier?.[3] ?? 0}
+              </p>
+              <p className="text-white/40 text-xs mt-0.5">Ouro</p>
+            </div>
           </div>
           {(grupo?.vipsDisponiveis ?? 0) === 0 && (
             <p className="text-white/30 text-xs mt-3">
@@ -298,6 +325,85 @@ export default function ControleGrupoPage() {
             </p>
           )}
         </div>
+
+        {/* Presentear VIP */}
+        {(grupo?.vipsDisponiveis ?? 0) > 0 && (
+          <div className="bg-br-dark2 border border-white/10 rounded-2xl p-5">
+            <p className="text-white/40 text-xs uppercase tracking-wider mb-3">Presentear VIP</p>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-white/60 text-xs mb-1.5">Nome no VRChat</label>
+                <input
+                  type="text"
+                  value={giftName}
+                  onChange={e => setGiftName(e.target.value)}
+                  className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-br-yellow/40"
+                  placeholder="Ex: NomeDoUsuario"
+                />
+              </div>
+              <div>
+                <label className="block text-white/60 text-xs mb-1.5">Tier do VIP</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { t: 1, label: 'Bronze', color: 'amber-600', estoque: grupo?.vipsPorTier?.[1] ?? 0 },
+                    { t: 2, label: 'Prata', color: 'gray-300', estoque: grupo?.vipsPorTier?.[2] ?? 0 },
+                    { t: 3, label: 'Ouro', color: 'yellow-400', estoque: grupo?.vipsPorTier?.[3] ?? 0 },
+                  ] as const).map(({ t, label, estoque }) => (
+                    <button
+                      key={t}
+                      type="button"
+                      disabled={estoque <= 0}
+                      onClick={() => setGiftTier(t)}
+                      className={`py-2 rounded-lg border text-xs font-semibold transition-all ${
+                        giftTier === t && estoque > 0
+                          ? 'bg-br-yellow/20 border-br-yellow text-br-yellow'
+                          : estoque > 0
+                          ? 'bg-black/20 border-white/10 text-white/40 hover:text-white/60'
+                          : 'bg-black/10 border-white/5 text-white/15 cursor-not-allowed'
+                      }`}
+                    >
+                      {label} ({estoque})
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <button
+                onClick={async () => {
+                  if (!giftName.trim()) return
+                  setGiftLoading(true)
+                  setGiftMsg(null)
+                  const res = await fetch('/api/controle/grupo/gift', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ vrchatName: giftName.trim(), tier: giftTier }),
+                  })
+                  const data = await res.json()
+                  if (res.ok) {
+                    setGiftMsg({ type: data.status === 'activated' ? 'success' : 'pending', text: data.message })
+                    setGiftName('')
+                    await carregarDados()
+                  } else {
+                    setGiftMsg({ type: 'error', text: data.error ?? 'Erro ao presentear' })
+                  }
+                  setGiftLoading(false)
+                }}
+                disabled={giftLoading || !giftName.trim()}
+                className="w-full bg-br-yellow text-black font-bold py-2.5 rounded-lg hover:brightness-110 transition-all text-sm disabled:opacity-50"
+              >
+                {giftLoading ? 'Enviando...' : '🎁 Dar VIP'}
+              </button>
+              {giftMsg && (
+                <div className={`text-xs px-3 py-2 rounded-lg border ${
+                  giftMsg.type === 'success' ? 'bg-green-500/10 border-green-500/20 text-green-400'
+                    : giftMsg.type === 'pending' ? 'bg-blue-500/10 border-blue-500/20 text-blue-400'
+                    : 'bg-red-500/10 border-red-500/20 text-red-400'
+                }`}>
+                  {giftMsg.text}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Link do sorteio */}
         <div className="bg-br-dark2 border border-white/10 rounded-2xl p-5">
@@ -433,6 +539,35 @@ export default function ControleGrupoPage() {
                 </div>
               )}
 
+              {formTipoPremio === 'vip' && (grupo?.vipsDisponiveis ?? 0) > 0 && (
+                <div>
+                  <label className="block text-white/60 text-xs mb-1.5">Tier do VIP</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {([
+                      { t: 1, label: 'Bronze', estoque: grupo?.vipsPorTier?.[1] ?? 0 },
+                      { t: 2, label: 'Prata', estoque: grupo?.vipsPorTier?.[2] ?? 0 },
+                      { t: 3, label: 'Ouro', estoque: grupo?.vipsPorTier?.[3] ?? 0 },
+                    ] as const).map(({ t, label, estoque }) => (
+                      <button
+                        key={t}
+                        type="button"
+                        disabled={estoque <= 0}
+                        onClick={() => setFormPremioTier(t)}
+                        className={`py-2 rounded-lg border text-xs font-semibold transition-all ${
+                          formPremioTier === t && estoque > 0
+                            ? 'bg-br-yellow/20 border-br-yellow text-br-yellow'
+                            : estoque > 0
+                            ? 'bg-black/20 border-white/10 text-white/40 hover:text-white/60'
+                            : 'bg-black/10 border-white/5 text-white/15 cursor-not-allowed'
+                        }`}
+                      >
+                        {label} ({estoque})
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {formTipoPremio === 'outro' && (
                 <div>
                   <label className="block text-white/60 text-xs mb-1.5">Descrição do Prêmio</label>
@@ -462,7 +597,7 @@ export default function ControleGrupoPage() {
                 <label className="block text-white/60 text-xs mb-1.5">Nº de Ganhadores</label>
                 <input
                   type="number" min="1"
-                  max={formTipoPremio === 'vip' ? (grupo?.vipsDisponiveis ?? 1) : 99}
+                  max={formTipoPremio === 'vip' ? (grupo?.vipsPorTier?.[formPremioTier as 1 | 2 | 3] ?? 1) : 99}
                   value={formNumVencedores}
                   onChange={e => setFormNumVencedores(e.target.value)}
                   className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-br-yellow/40"

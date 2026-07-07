@@ -17,6 +17,7 @@ interface SorteioData {
   tipoPremio: 'vip' | 'outro'
   descricaoPremio: string
   premioDias: number
+  premioTier?: number
   totalParticipantes: number
   sorteado: boolean
   vencedores: { id: string; nome: string; colocacao: number }[]
@@ -149,7 +150,7 @@ export default function SorteioGrupo({
               {(sorteio.tipoPremio ?? 'vip') === 'vip' ? (
                 <div className="flex items-center gap-2 bg-br-yellow/10 border border-br-yellow/30 rounded-full px-4 py-1.5 text-sm text-br-yellow font-semibold">
                   <span>👑</span>
-                  {sorteio.premioDias} dias de VIP
+                  {sorteio.premioDias} dias de {sorteio.premioTier === 3 ? 'VIP Ouro' : sorteio.premioTier === 2 ? 'VIP Prata' : 'VIP Bronze'}
                 </div>
               ) : (
                 <div className="flex items-center gap-2 bg-purple-500/10 border border-purple-400/30 rounded-full px-4 py-1.5 text-sm text-purple-300 font-semibold">

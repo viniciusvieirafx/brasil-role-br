@@ -110,6 +110,11 @@ export async function POST(_req: NextRequest) {
     console.error(`[verify] Erro ao ativar presentes pendentes para ${discordUser.id}:`, e),
   )
 
+  // Processa presentes pendentes por nome VRChat (de grupos verificados)
+  activatePendingVrcGifts(discordUser.id, vrchatUser.displayName).catch((e) =>
+    console.error(`[verify] Erro ao ativar presentes VRC pendentes para ${discordUser.id}:`, e),
+  )
+
   cookieStore.set('verify_data', '', { maxAge: 0, path: '/' })
   return NextResponse.json({ verified: true })
 }
@@ -174,5 +179,55 @@ async function activatePendingGifts(userId: string) {
   }
 
   // Remove presentes pendentes
+  await kvDel(pendingKey)
+}
+
+/* ── Ativar presentes pendentes por nome VRChat (de grupos verificados) ── */
+
+async function activatePendingVrcGifts(userId: string, vrchatDisplayName: string) {
+  const pendingKey = `pending-vrc-gift:${vrchatDisplayName.toLowerCase()}`
+  const raw = await kvGet(pendingKey)
+  if (!raw) return
+
+  const gifts: { tier: number; grupoSlug: string; grupoNome: string; createdAt: string }[] = JSON.parse(raw)
+  if (gifts.length === 0) return
+
+  for (const gift of gifts) {
+    const roleId = TIER_ROLES[gift.tier] ?? process.env.DISCORD_VIP_ROLE_ID!
+
+    // Adiciona cargo VIP
+    await fetch(
+      `https://discord.com/api/v10/guilds/${process.env.DISCORD_GUILD_ID}/members/${userId}/roles/${roleId}`,
+      { method: 'PUT', headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`, 'Content-Type': 'application/json' } },
+    )
+
+    // Salva expiração
+    const existingVipRaw = await kvGet(`vip:${userId}`)
+    const existingVip = existingVipRaw ? JSON.parse(existingVipRaw) : {}
+    const now = new Date()
+    const currentExpiry = existingVip.expiresAt ? new Date(existingVip.expiresAt) : now
+    const baseDate = currentExpiry > now ? currentExpiry : now
+    baseDate.setDate(baseDate.getDate() + 30)
+    const expiresStr = baseDate.toISOString().split('T')[0]
+
+    await kvSet(`vip:${userId}`, JSON.stringify({ ...existingVip, expiresAt: expiresStr, roleId, tier: gift.tier, optOut: false, ultimoAviso: undefined }))
+
+    // Contabiliza meses
+    const monthsKey = `vip-months:${userId}`
+    const monthsRaw = await kvGet(monthsKey)
+    const monthsData = monthsRaw ? JSON.parse(monthsRaw) : { totalMonths: 0, firstPaymentAt: new Date().toISOString() }
+    monthsData.totalMonths += 1
+    await kvSet(monthsKey, JSON.stringify(monthsData))
+
+    const tierName = TIER_NAMES[gift.tier] ?? 'VIP'
+    await sendDiscordDMEmbed(userId, {
+      title: '🎁 Presente ativado!',
+      description: `Você verificou sua conta e seu **${tierName}** (presente do grupo **${gift.grupoNome}**) foi ativado!\n\nVálido por **30 dias**.`,
+      color: TIER_COLORS[gift.tier] ?? 0xFFD700,
+    })
+
+    console.log(`[verify] Presente VRC pendente ativado: ${userId} tier ${gift.tier} (grupo ${gift.grupoSlug})`)
+  }
+
   await kvDel(pendingKey)
 }

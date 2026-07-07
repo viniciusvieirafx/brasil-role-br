@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json()
-  const { descricao, numVencedores, expiraEm, tipoPremio, descricaoPremio } = body
+  const { descricao, numVencedores, expiraEm, tipoPremio, descricaoPremio, premioTier } = body
 
   if (!descricao?.trim()) {
     return NextResponse.json({ error: 'Aviso/descrição obrigatório' }, { status: 400 })
@@ -49,14 +49,16 @@ export async function POST(req: NextRequest) {
   const tipo: 'vip' | 'outro' = tipoPremio === 'outro' ? 'outro' : 'vip'
   const numV = Math.max(1, parseInt(numVencedores) || 1)
   const dias = 30
+  const tier: number = [1, 2, 3].includes(premioTier) ? premioTier : 1
 
   if (tipo === 'vip') {
-    if (grupo.vipsDisponiveis <= 0) {
-      return NextResponse.json({ error: 'Sem VIPs disponíveis para criar sorteio de VIP' }, { status: 403 })
+    const estoqueDoTier = grupo.vipsPorTier[tier as 1 | 2 | 3] ?? 0
+    if (estoqueDoTier <= 0) {
+      return NextResponse.json({ error: 'Sem VIPs disponíveis desse tier para criar sorteio' }, { status: 403 })
     }
-    if (numV > grupo.vipsDisponiveis) {
+    if (numV > estoqueDoTier) {
       return NextResponse.json(
-        { error: `Você tem apenas ${grupo.vipsDisponiveis} VIP(s) disponível(is)` },
+        { error: `Você tem apenas ${estoqueDoTier} VIP(s) desse tier disponível(is)` },
         { status: 400 }
       )
     }
@@ -77,6 +79,7 @@ export async function POST(req: NextRequest) {
     tipoPremio: tipo,
     descricaoPremio: tipo === 'outro' ? descricaoPremio.trim() : '',
     premioDias: dias,
+    premioTier: tipo === 'vip' ? tier : undefined,
     participantes: [] as string[],
     sorteado: false,
     vencedores: [] as { id: string; nome: string; colocacao: number }[],

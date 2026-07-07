@@ -1,13 +1,16 @@
 import { kvGet, kvSet, kvDel } from '@/lib/kv'
 import { createHash } from 'crypto'
 
+export type VipsPorTier = { 1: number; 2: number; 3: number }
+
 export type Grupo = {
   slug: string
   nome: string
   senhaHash: string
   canalId: string | null
   ativo: boolean
-  vipsDisponiveis: number
+  vipsDisponiveis: number // legado — soma dos tiers
+  vipsPorTier: VipsPorTier
 }
 
 export type GrupoSorteio = {
@@ -20,6 +23,7 @@ export type GrupoSorteio = {
   tipoPremio: 'vip' | 'outro'
   descricaoPremio: string
   premioDias: number
+  premioTier?: number
   participantes: string[]
   sorteado: boolean
   vencedores: { id: string; nome: string; colocacao: number }[]
@@ -30,9 +34,17 @@ export function hashSenha(senha: string): string {
   return createHash('sha256').update(senha).digest('hex')
 }
 
+function migrateGrupo(g: any): Grupo {
+  if (!g.vipsPorTier) {
+    g.vipsPorTier = { 1: g.vipsDisponiveis ?? 0, 2: 0, 3: 0 }
+  }
+  g.vipsDisponiveis = (g.vipsPorTier[1] ?? 0) + (g.vipsPorTier[2] ?? 0) + (g.vipsPorTier[3] ?? 0)
+  return g as Grupo
+}
+
 export async function getGrupo(slug: string): Promise<Grupo | null> {
   const raw = await kvGet(`grupo:${slug}`)
-  return raw ? JSON.parse(raw) : null
+  return raw ? migrateGrupo(JSON.parse(raw)) : null
 }
 
 export async function saveGrupo(grupo: Grupo): Promise<void> {

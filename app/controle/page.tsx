@@ -48,6 +48,7 @@ type GrupoAdmin = {
   canalId: string | null
   ativo: boolean
   vipsDisponiveis: number
+  vipsPorTier: { 1: number; 2: number; 3: number }
   senhaHash: string
 }
 
@@ -208,6 +209,7 @@ export default function ControlePage() {
   const [gBusy, setGBusy]                   = useState(false)
   const [gVipsSlug, setGVipsSlug]           = useState<string | null>(null)
   const [gVipsQtd, setGVipsQtd]             = useState(1)
+  const [gVipsTier, setGVipsTier]           = useState(1)
   const [gVipsBusy, setGVipsBusy]           = useState(false)
 
   // ── Propagandas ───────────────────────────────────────────
@@ -1953,17 +1955,44 @@ export default function ControlePage() {
                       </div>
                     </div>
 
-                    {/* VIPs disponíveis */}
-                    <div className="flex items-center gap-2">
-                      <span className={`text-lg font-bold ${g.vipsDisponiveis > 0 ? 'text-br-yellow' : 'text-white/30'}`}>
-                        {g.vipsDisponiveis} VIP{g.vipsDisponiveis !== 1 ? 's' : ''}
-                      </span>
+                    {/* VIPs disponíveis por tier */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5 text-xs">
+                        {g.vipsPorTier ? (
+                          <>
+                            <span className={`font-bold ${(g.vipsPorTier[1] ?? 0) > 0 ? 'text-amber-600' : 'text-white/20'}`}>
+                              {g.vipsPorTier[1] ?? 0} <span className="text-white/40">B</span>
+                            </span>
+                            <span className="text-white/10">·</span>
+                            <span className={`font-bold ${(g.vipsPorTier[2] ?? 0) > 0 ? 'text-gray-300' : 'text-white/20'}`}>
+                              {g.vipsPorTier[2] ?? 0} <span className="text-white/40">P</span>
+                            </span>
+                            <span className="text-white/10">·</span>
+                            <span className={`font-bold ${(g.vipsPorTier[3] ?? 0) > 0 ? 'text-yellow-400' : 'text-white/20'}`}>
+                              {g.vipsPorTier[3] ?? 0} <span className="text-white/40">O</span>
+                            </span>
+                          </>
+                        ) : (
+                          <span className={`font-bold ${g.vipsDisponiveis > 0 ? 'text-br-yellow' : 'text-white/30'}`}>
+                            {g.vipsDisponiveis} VIP{g.vipsDisponiveis !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </div>
                       {gVipsSlug === g.slug ? (
                         <div className="flex items-center gap-1">
+                          <select
+                            value={gVipsTier}
+                            onChange={e => setGVipsTier(parseInt(e.target.value))}
+                            className="bg-br-dark border border-white/15 rounded px-1 py-1 text-xs text-white focus:outline-none"
+                          >
+                            <option value={1}>Bronze</option>
+                            <option value={2}>Prata</option>
+                            <option value={3}>Ouro</option>
+                          </select>
                           <input
                             type="number" min="1" value={gVipsQtd}
                             onChange={e => setGVipsQtd(parseInt(e.target.value) || 1)}
-                            className="w-16 bg-br-dark border border-white/15 rounded px-2 py-1 text-xs text-white text-center focus:outline-none"
+                            className="w-12 bg-br-dark border border-white/15 rounded px-2 py-1 text-xs text-white text-center focus:outline-none"
                           />
                           <button
                             disabled={gVipsBusy}
@@ -1972,7 +2001,7 @@ export default function ControlePage() {
                               const res = await fetch(`/api/controle/grupos/${g.slug}/vips`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ quantidade: gVipsQtd }),
+                                body: JSON.stringify({ quantidade: gVipsQtd, tier: gVipsTier }),
                               })
                               if (res.ok) { setGVipsSlug(null); await loadGrupos() }
                               setGVipsBusy(false)
@@ -1985,7 +2014,7 @@ export default function ControlePage() {
                         </div>
                       ) : (
                         <button
-                          onClick={() => { setGVipsSlug(g.slug); setGVipsQtd(1) }}
+                          onClick={() => { setGVipsSlug(g.slug); setGVipsQtd(1); setGVipsTier(1) }}
                           className="text-xs bg-white/10 text-white/60 px-2 py-1 rounded hover:bg-white/20 transition-colors"
                         >
                           + VIPs

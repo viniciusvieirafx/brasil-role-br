@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
     canalId: null,
     ativo: true,
     vipsDisponiveis: 0,
+    vipsPorTier: { 1: 0, 2: 0, 3: 0 } as { 1: number; 2: number; 3: number },
   }
 
   await saveGrupo(grupo)

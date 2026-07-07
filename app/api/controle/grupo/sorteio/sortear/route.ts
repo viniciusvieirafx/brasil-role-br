@@ -33,9 +33,12 @@ export async function POST(req: NextRequest) {
   const tipoPremio = sorteio.tipoPremio ?? 'vip'
 
   if (tipoPremio === 'vip') {
+    const tier = sorteio.premioTier ?? 1
     // Conceder VIP para os vencedores e descontar do pool do grupo
-    await Promise.all(vencedores.map(v => concederVip(v.id, sorteio.premioDias)))
-    grupo.vipsDisponiveis = Math.max(0, grupo.vipsDisponiveis - vencedores.length)
+    await Promise.all(vencedores.map(v => concederVip(v.id, sorteio.premioDias, tier)))
+    const tierKey = tier as 1 | 2 | 3
+    grupo.vipsPorTier[tierKey] = Math.max(0, (grupo.vipsPorTier[tierKey] ?? 0) - vencedores.length)
+    grupo.vipsDisponiveis = grupo.vipsPorTier[1] + grupo.vipsPorTier[2] + grupo.vipsPorTier[3]
     await saveGrupo(grupo)
   }
 

@@ -139,13 +139,31 @@ export async function anunciarVencedores(
   })
 }
 
-export async function concederVip(discordId: string, dias: number): Promise<void> {
-  const roleId = process.env.DISCORD_VIP_ROLE_ID!
+const TIER_ROLE_IDS: Record<number, string | undefined> = {
+  1: process.env.DISCORD_VIP_ROLE_ID,
+  2: process.env.DISCORD_VIP2_ROLE_ID,
+  3: process.env.DISCORD_VIP3_ROLE_ID,
+}
+
+export async function concederVip(discordId: string, dias: number, tier: number = 1): Promise<void> {
+  const roleId = TIER_ROLE_IDS[tier] ?? process.env.DISCORD_VIP_ROLE_ID!
   const expiresAt = new Date()
   expiresAt.setDate(expiresAt.getDate() + dias)
   const expiresAtStr = expiresAt.toISOString().split('T')[0]
 
-  await kvSet(`vip:${discordId}`, JSON.stringify({ expiresAt: expiresAtStr, roleId }))
+  // Remove cargos de tiers inferiores
+  const lowerRoles = [
+    tier > 1 ? process.env.DISCORD_VIP_ROLE_ID : undefined,
+    tier > 2 ? process.env.DISCORD_VIP2_ROLE_ID : undefined,
+  ].filter(Boolean) as string[]
+  for (const lr of lowerRoles) {
+    await fetch(
+      `https://discord.com/api/v10/guilds/${process.env.DISCORD_GUILD_ID}/members/${discordId}/roles/${lr}`,
+      { method: 'DELETE', headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` } },
+    ).catch(() => {})
+  }
+
+  await kvSet(`vip:${discordId}`, JSON.stringify({ expiresAt: expiresAtStr, roleId, tier }))
 
   await fetch(
     `https://discord.com/api/v10/guilds/${process.env.DISCORD_GUILD_ID}/members/${discordId}/roles/${roleId}`,
@@ -154,6 +172,13 @@ export async function concederVip(discordId: string, dias: number): Promise<void
       headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`, 'Content-Type': 'application/json' },
     }
   )
+
+  // Incrementa meses de VIP
+  const monthsKey = `vip-months:${discordId}`
+  const monthsRaw = await kvGet(monthsKey)
+  const monthsData = monthsRaw ? JSON.parse(monthsRaw) : { totalMonths: 0, firstPaymentAt: new Date().toISOString() }
+  monthsData.totalMonths += 1
+  await kvSet(monthsKey, JSON.stringify(monthsData))
 }
 
 async function sendDM(discordId: string, message: string): Promise<void> {
@@ -212,9 +237,12 @@ async function postChannel(channelId: string, body: object) {
   })
 }
 
+const TIER_LABELS: Record<number, string> = { 1: 'VIP Bronze', 2: 'VIP Prata', 3: 'VIP Ouro' }
+
 function labelPremio(sorteio: GrupoSorteio): string {
   if (sorteio.tipoPremio === 'outro') return sorteio.descricaoPremio || 'Prêmio especial'
-  return `${sorteio.premioDias} dias de VIP`
+  const tierLabel = TIER_LABELS[sorteio.premioTier ?? 1] ?? 'VIP'
+  return `${sorteio.premioDias} dias de ${tierLabel}`
 }
 
 /** Anúncio inicial do sorteio no canal do grupo (com botão para o site) */
