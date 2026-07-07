@@ -298,7 +298,7 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
           {TIERS.map(tier => (
             <div
               key={tier.tier}
-              className={`relative rounded-2xl border-2 p-6 transition-all ${
+              className={`relative rounded-2xl border-2 p-6 transition-all flex flex-col ${
                 tier.tier === 3
                   ? 'vip-ouro-card'
                   : `${tier.borderColor} ${tier.glowColor} ${tier.badge}`
@@ -320,7 +320,7 @@ export default function VIP({ initialUser, initialVerified }: { initialUser: Dis
                   <span className="text-sm font-normal text-gray-400">/mês</span>
                 </div>
               </div>
-              <ul className="space-y-2 text-sm text-gray-300 mb-5">
+              <ul className="space-y-2 text-sm text-gray-300 mb-5 flex-1">
                 {tier.benefits.map((b, i) => <li key={i}>{b}</li>)}
               </ul>
               {step === 'selectTier' && (
