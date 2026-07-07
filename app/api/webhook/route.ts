@@ -137,6 +137,14 @@ async function notifyChannel(
   })
 }
 
+async function incrementVipMonths(discordUserId: string, months: number = 1) {
+  const key = `vip-months:${discordUserId}`
+  const raw = await kvGet(key)
+  const data = raw ? JSON.parse(raw) : { totalMonths: 0, firstPaymentAt: new Date().toISOString() }
+  data.totalMonths += months
+  await kvSet(key, JSON.stringify(data))
+}
+
 /* ── Parsers de external_reference ─────────────────── */
 
 // Normal:       discord-{userId}-t{tier}
@@ -228,6 +236,9 @@ async function handlePayment(paymentId: string | undefined) {
   const recipientId = parsed.recipientId!
   const roleId = await addVipRole(recipientId, tier)
   const expiresStr = await saveVipExpiry(recipientId, tier, roleId)
+
+  // Contabiliza +1 mês de VIP pro destinatário
+  await incrementVipMonths(recipientId)
 
   // Notificação no canal
   await notifyChannel(recipientId, tier, payment.transaction_amount, payment.payment_method_id, expiresStr, buyerId)
@@ -348,6 +359,7 @@ async function handleBulkRandomGift(tier: number, quantity: number, buyerId: str
       await kvSet(`vip:${memberId}`, JSON.stringify({
         ...existing, expiresAt: expiresStr, roleId, tier, optOut: false, ultimoAviso: undefined,
       }))
+      await incrementVipMonths(memberId, count)
       activatedCount++
 
       await sendDiscordDMEmbed(memberId, {
@@ -356,7 +368,7 @@ async function handleBulkRandomGift(tier: number, quantity: number, buyerId: str
         color: TIER_COLORS[tier] ?? 0xFFD700,
       })
     } else {
-      // Salva presente pendente com a quantidade de meses
+      // Salva presente pendente com a quantidade de meses (será contabilizado ao verificar)
       const pendingKey = `pending-gifts:${memberId}`
       const existingRaw = await kvGet(pendingKey)
       const existingGifts = existingRaw ? JSON.parse(existingRaw) : []
@@ -505,6 +517,7 @@ async function handleSubscriptionPayment(authorizedPaymentId: string | undefined
   if (authPayment.status === 'approved') {
     const roleId = await addVipRole(recipientId, tier)
     const expiresStr = await saveVipExpiry(recipientId, tier, roleId)
+    await incrementVipMonths(recipientId)
 
     await sendDiscordDMEmbed(recipientId, {
       title: '💳 Assinatura renovada!',

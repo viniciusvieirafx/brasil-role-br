@@ -11,44 +11,38 @@ export async function GET() {
   }
 
   try {
-    // Busca todos os VIPs e gifters em paralelo
-    const [vipKeys, gifterKeys] = await Promise.all([
-      kvKeys('vip:*'),
+    // Busca vip-months e gifters em paralelo
+    const [monthsKeys, gifterKeys] = await Promise.all([
+      kvKeys('vip-months:*'),
       kvKeys('gifter-points:*'),
     ])
 
-    // ── Top VIPs (assinantes com mais tempo restante / tier mais alto) ──
-    const vipResults = await Promise.all(vipKeys.map((k) => kvGet(k)))
-    const vipDiscordIds = vipKeys.map((k) => k.replace('vip:', ''))
+    // ── Top VIPs (quem acumulou mais meses de assinatura) ──
+    const monthsResults = await Promise.all(monthsKeys.map((k) => kvGet(k)))
+    const monthsDiscordIds = monthsKeys.map((k) => k.replace('vip-months:', ''))
 
-    const now = new Date()
-    const vips: { discordId: string; tier: number; expiresAt: string; monthsLeft: number }[] = []
+    const vips: { discordId: string; totalMonths: number; firstPaymentAt: string }[] = []
 
-    for (let i = 0; i < vipKeys.length; i++) {
-      const raw = vipResults[i]
+    for (let i = 0; i < monthsKeys.length; i++) {
+      const raw = monthsResults[i]
       if (!raw) continue
       const data = JSON.parse(raw)
-      if (!data.expiresAt) continue
-      if (data.vitalicio) continue // VIP vitalício não entra no ranking
-      const expiry = new Date(data.expiresAt)
-      const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-      if (daysLeft <= 0) continue // VIP expirado
-      const monthsLeft = Math.round(daysLeft / 30 * 10) / 10 // 1 casa decimal
-      vips.push({
-        discordId: vipDiscordIds[i],
-        tier: data.tier ?? 1,
-        expiresAt: data.expiresAt,
-        monthsLeft,
-      })
+      if (data.totalMonths > 0) {
+        vips.push({
+          discordId: monthsDiscordIds[i],
+          totalMonths: data.totalMonths,
+          firstPaymentAt: data.firstPaymentAt,
+        })
+      }
     }
 
-    // Ordena: tier mais alto primeiro, depois mais meses restantes
+    // Ordena: mais meses primeiro, empate por quem assinou primeiro
     vips.sort((a, b) => {
-      if (b.tier !== a.tier) return b.tier - a.tier
-      return b.monthsLeft - a.monthsLeft
+      if (b.totalMonths !== a.totalMonths) return b.totalMonths - a.totalMonths
+      return new Date(a.firstPaymentAt).getTime() - new Date(b.firstPaymentAt).getTime()
     })
 
-    // Busca nomes do Discord para os top 10 VIPs
+    // Busca nomes do Discord para os top 10
     const topVips = vips.slice(0, 10)
     const topVipsWithNames = await Promise.all(
       topVips.map(async (v) => {

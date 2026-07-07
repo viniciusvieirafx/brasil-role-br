@@ -155,6 +155,13 @@ async function activatePendingGifts(userId: string) {
 
     await kvSet(`vip:${userId}`, JSON.stringify({ ...existingVip, expiresAt: expiresStr, roleId, tier: gift.tier, optOut: false, ultimoAviso: undefined }))
 
+    // Contabiliza meses de VIP
+    const monthsKey = `vip-months:${userId}`
+    const monthsRaw = await kvGet(monthsKey)
+    const monthsData = monthsRaw ? JSON.parse(monthsRaw) : { totalMonths: 0, firstPaymentAt: new Date().toISOString() }
+    monthsData.totalMonths += giftCount
+    await kvSet(monthsKey, JSON.stringify(monthsData))
+
     const tierName = TIER_NAMES[gift.tier] ?? 'VIP'
     const daysLabel = giftCount > 1 ? `${totalDays} dias (${giftCount}x 30 dias)` : '30 dias'
     await sendDiscordDMEmbed(userId, {

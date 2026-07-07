@@ -5,9 +5,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 interface TopVip {
   discordId: string
   displayName: string
-  tier: number
-  expiresAt: string
-  monthsLeft: number
+  totalMonths: number
 }
 
 interface TopGifter {
@@ -15,11 +13,6 @@ interface TopGifter {
   points: number
 }
 
-const TIER_STYLE: Record<number, { name: string; emoji: string; color: string; border: string; bg: string }> = {
-  1: { name: 'Bronze', emoji: '🥉', color: 'text-amber-500', border: 'border-amber-700/40', bg: 'bg-amber-900/20' },
-  2: { name: 'Prata', emoji: '🥈', color: 'text-slate-300', border: 'border-slate-400/40', bg: 'bg-slate-800/20' },
-  3: { name: 'Ouro', emoji: '🥇', color: 'text-yellow-400', border: 'border-yellow-500/40', bg: 'bg-yellow-900/20' },
-}
 
 export default function Contributors() {
   const { t } = useLanguage()
@@ -78,26 +71,28 @@ export default function Contributors() {
               ) : (
                 <div className="space-y-2">
                   {topVips.map((vip, i) => {
-                    const style = TIER_STYLE[vip.tier] ?? TIER_STYLE[1]
                     const isTop3 = i < 3
+                    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : ''
                     return (
                       <div
                         key={vip.discordId}
-                        className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${style.border} ${style.bg} ${
-                          isTop3 ? 'hover:scale-[1.02]' : ''
+                        className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
+                          isTop3
+                            ? 'border-br-green/30 bg-br-green/5 hover:scale-[1.02]'
+                            : 'border-white/5 bg-white/[0.02]'
                         }`}
                       >
-                        <span className={`text-lg font-bold w-7 text-center ${isTop3 ? style.color : 'text-gray-600'}`}>
-                          {i + 1}
+                        <span className={`text-lg font-bold w-7 text-center ${isTop3 ? 'text-br-green' : 'text-gray-600'}`}>
+                          {medal || i + 1}
                         </span>
                         <div className="flex-1 min-w-0">
                           <p className={`font-bold truncate ${isTop3 ? 'text-white' : 'text-gray-300'}`}>
                             {vip.displayName}
                           </p>
-                          <p className={`text-xs ${style.color}`}>
-                            {style.emoji} {style.name} — {vip.monthsLeft} {vip.monthsLeft === 1 ? t.contributors.monthLeft : t.contributors.monthsLeft}
-                          </p>
                         </div>
+                        <span className={`text-sm font-bold ${isTop3 ? 'text-br-green' : 'text-gray-500'}`}>
+                          {vip.totalMonths} {vip.totalMonths === 1 ? t.contributors.monthLabel : t.contributors.monthsLabel}
+                        </span>
                       </div>
                     )
                   })}
