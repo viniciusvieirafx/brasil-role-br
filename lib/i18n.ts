@@ -170,7 +170,7 @@ export const translations: Record<Lang, Translations> = {
     vip: {
       titleA: 'TORNAR-SE',
       titleB: 'VIP',
-      subtitle: 'Apoie o servidor e ganhe benefícios exclusivos',
+      subtitle: 'Apoie o servidor, ganhe benefícios exclusivos ou presenteie um amigo!',
       price: 'R$ 5',
       priceDesc: 'por mês • renovação manual',
       benefits: [
@@ -381,7 +381,7 @@ export const translations: Record<Lang, Translations> = {
     vip: {
       titleA: 'BECOME',
       titleB: 'VIP',
-      subtitle: 'Support the server and earn exclusive benefits',
+      subtitle: 'Support the server, earn exclusive benefits, or gift VIP to a friend!',
       price: 'R$ 5',
       priceDesc: 'per month • manual renewal',
       benefits: [
@@ -589,7 +589,7 @@ export const translations: Record<Lang, Translations> = {
     vip: {
       titleA: 'HACERSE',
       titleB: 'VIP',
-      subtitle: 'Apoya el servidor y gana beneficios exclusivos',
+      subtitle: 'Apoya el servidor, gana beneficios exclusivos o regala VIP a un amigo!',
       price: 'R$ 5',
       priceDesc: 'por mes • renovación manual',
       benefits: [

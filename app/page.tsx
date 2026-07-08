@@ -63,7 +63,7 @@ export default async function Home() {
       <Gallery />
       <Team />
       <VerifiedGroups />
-      <PatchNotes updates={updates} latestVersion={latestVersion} />
+      <Contributors />
       <VerifyVRChat initialUser={discordUser} initialVerified={isVerified} />
       <VIP initialUser={discordUser} initialVerified={isVerified} />
       <Sorteio
@@ -72,7 +72,7 @@ export default async function Home() {
         initialUser={discordUser}
         initialVerified={isVerified}
       />
-      <Contributors />
+      <PatchNotes updates={updates} latestVersion={latestVersion} />
       <Contact />
       <Footer />
     </main>

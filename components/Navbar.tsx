@@ -24,11 +24,11 @@ export default function Navbar({ latestVersion }: NavbarProps) {
     { href: '#inicio',   label: t.nav.home,    badge: false, external: false },
     { href: '#sobre',    label: t.nav.about,   badge: false, external: false },
     { href: '#equipe',   label: t.nav.team,    badge: false, external: false },
-    { href: '#atualizacoes', label: t.nav.updates, badge: hasNew, external: false },
+    { href: '#contribuidores', label: t.nav.contributors, badge: false, external: false },
     { href: '#verificar',label: t.nav.verify,  badge: false, external: false },
     { href: '#vip',      label: t.nav.vip,     badge: false, external: false },
     { href: '#sorteio',  label: t.nav.raffle,  badge: false, external: false },
-    { href: '#contribuidores', label: t.nav.contributors, badge: false, external: false },
+    { href: '#atualizacoes', label: t.nav.updates, badge: hasNew, external: false },
     { href: '/pets',     label: t.nav.pets,    badge: false, external: false },
     { href: '#contato',  label: t.nav.contact, badge: false, external: false },
   ]
