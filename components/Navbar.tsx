@@ -75,7 +75,7 @@ export default function Navbar({ latestVersion }: NavbarProps) {
           <span className="text-white">BR</span>
         </a>
 
-        <div className="hidden md:flex items-center gap-8">
+        <div className="hidden md:flex items-center gap-4 lg:gap-5">
           {links.map(l => (
             <a
               key={l.href}
