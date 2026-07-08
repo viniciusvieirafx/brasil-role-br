@@ -6,12 +6,25 @@ import { useLanguage } from '@/contexts/LanguageContext'
 const VRCHAT_WORLD_URL = 'https://vrchat.com/home/launch?worldId=wrld_7206c98b-68bd-4468-8b2c-55c9d874d844'
 
 const images = [
-  { src: '/map/cinema.png',   alt: 'Cinema Coruja' },
-  { src: '/map/comedy.png',   alt: 'VRComedy Club' },
-  { src: '/map/chillrap.png', alt: 'Área de Festa'  },
-  { src: '/map/hotelvip.png', alt: 'Hotel VIP'     },
-  { src: '/map/bar.png',      alt: 'Bar'           },
-  { src: '/map/aerial.png',   alt: 'Vista do Mapa' },
+  { src: '/map/cinema.png',          alt: 'Cinema Corujão' },
+  { src: '/map/comedy.png',          alt: 'VRComedy Club' },
+  { src: '/map/chillrap.png',        alt: 'Chill Rap' },
+  { src: '/map/hotelvip.png',        alt: 'Hotel VIP' },
+  { src: '/map/bar.png',             alt: 'Bar' },
+  { src: '/map/aerial.png',          alt: 'Vista do Mapa' },
+  { src: '/map/portal-vip.jpg',      alt: 'Portal VIP' },
+  { src: '/map/cadeia.jpg',          alt: 'Cadeia' },
+  { src: '/map/palco-karaoke.png',   alt: 'Palco Karaokê' },
+  { src: '/map/galera-dancando.png',  alt: 'Galera Dançando' },
+  { src: '/map/festa-na-rua.png',    alt: 'Festa na Rua' },
+  { src: '/map/ura-booster.png',     alt: 'Palco URA Booster' },
+  { src: '/map/grupo-rooftop.png',   alt: 'Grupo no Rooftop' },
+  { src: '/map/star-wars.png',       alt: 'Encontro Star Wars' },
+  { src: '/map/comedy-plateia.png',  alt: 'Plateia do Comedy' },
+  { src: '/map/podcast.png',         alt: 'Estúdio Podcast' },
+  { src: '/map/selfie-noturna.png',  alt: 'Selfie Noturna' },
+  { src: '/map/grupo-bandeira.png',  alt: 'Grupo com Bandeira' },
+  { src: '/map/standup.png',         alt: 'Show de Stand-up' },
 ]
 
 const reversed = [...images].reverse()
