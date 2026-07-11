@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/sorteio",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/daily-auth",
+      "schedule": "0 12 * * *"
     }
   ]
 }
