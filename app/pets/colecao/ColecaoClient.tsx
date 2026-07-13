@@ -73,10 +73,10 @@ export default function ColecaoClient({ initialUser }: { initialUser: DiscordUse
         </section>
       )}
 
-      {/* Pokédex completa */}
+      {/* Miradex completa */}
       <section>
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-          <h2 className="text-zinc-400 text-sm uppercase tracking-wider">Pokédex</h2>
+          <h2 className="text-zinc-400 text-sm uppercase tracking-wider">Miradex</h2>
           <div className="flex gap-1 flex-wrap">
             {RARITIES.map(r => (
               <button
