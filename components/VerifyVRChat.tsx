@@ -51,6 +51,10 @@ export default function VerifyVRChat({ initialUser, initialVerified }: { initial
           setTimeout(() => {
             document.getElementById('vip')?.scrollIntoView({ behavior: 'smooth' })
           }, 800)
+        } else if (data.error && res.status >= 400) {
+          // Show session/auth errors (not "code not found" which is expected while waiting)
+          setErrorMsg(data.error)
+          if (intervalRef.current) clearInterval(intervalRef.current)
         }
       } catch {
         // silent — will retry on next interval

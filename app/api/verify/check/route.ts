@@ -13,6 +13,7 @@ async function getVRChatUser(username: string): Promise<{ bio: string; displayNa
 
   const res = await fetch(`${proxyUrl}/user?name=${encodeURIComponent(username)}`, {
     headers: { 'x-api-key': proxyKey },
+    cache: 'no-store',
   })
 
   if (res.status === 401) throw new Error('API key inválida')
