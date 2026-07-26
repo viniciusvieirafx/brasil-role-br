@@ -212,6 +212,10 @@ export default function VerifyVRChat({ initialUser, initialVerified }: { initial
                 {t.verify.autoCheckMsg}
               </div>
 
+              <p className="text-gray-500 text-xs text-center">
+                {t.verify.cacheWarning}
+              </p>
+
               {errorMsg && (
                 <p className="text-red-400 text-sm text-center">{errorMsg}</p>
               )}

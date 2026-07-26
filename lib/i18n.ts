@@ -20,7 +20,7 @@ export type Translations = {
     generateBtn: string; generating: string
     bioTitle: string; bioDesc: string
     copyBtn: string; copied: string; bioHint: string
-    openVRChat: string; autoCheckMsg: string; autoCheckFound: string
+    openVRChat: string; autoCheckMsg: string; autoCheckFound: string; cacheWarning: string
     tutorialStep1: string; tutorialStep2: string; tutorialStep3: string
     verifyBtn: string; verifying: string; changeUser: string
     doneTitle: string; doneDesc_before: string; doneDesc_bold: string; doneDesc_after: string; doneHint: string
@@ -149,6 +149,7 @@ export const translations: Record<Lang, Translations> = {
       bioHint: 'Depois de salvar o perfil no VRChat, a verificação acontece automaticamente. Pode remover o código após a verificação.',
       openVRChat: '🔗 Abrir meu perfil no VRChat',
       autoCheckMsg: 'Verificando automaticamente...',
+      cacheWarning: 'A API do VRChat pode demorar alguns minutos para atualizar sua bio. Continue aguardando.',
       autoCheckFound: 'Código detectado!',
       tutorialStep1: '1. Clique em "Edit Profile"',
       tutorialStep2: '2. Cole o código na seção "About Me"',
@@ -360,6 +361,7 @@ export const translations: Record<Lang, Translations> = {
       bioHint: 'After saving your VRChat profile, verification happens automatically. You may remove the code after verification.',
       openVRChat: '🔗 Open my VRChat profile',
       autoCheckMsg: 'Checking automatically...',
+      cacheWarning: 'The VRChat API may take a few minutes to update your bio. Please keep waiting.',
       autoCheckFound: 'Code detected!',
       tutorialStep1: '1. Click "Edit Profile"',
       tutorialStep2: '2. Paste the code in the "About Me" section',
@@ -568,6 +570,7 @@ export const translations: Record<Lang, Translations> = {
       bioHint: 'Después de guardar el perfil en VRChat, la verificación ocurre automáticamente. Puedes eliminar el código después de la verificación.',
       openVRChat: '🔗 Abrir mi perfil en VRChat',
       autoCheckMsg: 'Verificando automáticamente...',
+      cacheWarning: 'La API de VRChat puede tardar unos minutos en actualizar tu bio. Sigue esperando.',
       autoCheckFound: '¡Código detectado!',
       tutorialStep1: '1. Haz clic en "Edit Profile"',
       tutorialStep2: '2. Pega el código en la sección "About Me"',
