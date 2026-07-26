@@ -116,6 +116,8 @@ export async function POST(_req: NextRequest) {
     console.error(`[verify] Erro ao ativar presentes VRC pendentes para ${discordUser.id}:`, e),
   )
 
+  // Limpa código de verificação do KV e cookie
+  kvDel(`verify-code:${discordUser.id}:${vrchatUsername.toLowerCase()}`).catch(() => {})
   cookieStore.set('verify_data', '', { maxAge: 0, path: '/' })
   return NextResponse.json({ verified: true })
 }
