@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
       client_secret: process.env.DISCORD_CLIENT_SECRET!,
       code,
       grant_type: 'authorization_code',
-      redirect_uri: `${new URL(req.url).origin}/api/auth/callback`,
+      redirect_uri: `${process.env.NEXT_PUBLIC_SITE_URL ?? new URL(req.url).origin}/api/auth/callback`,
     }),
   })
 
