@@ -12,8 +12,12 @@ async function _cmd(args: string[]): Promise<any> {
   return data.result
 }
 
-export async function kvSet(key: string, value: string): Promise<void> {
-  await _cmd(['set', key, value])
+export async function kvSet(key: string, value: string, ttlSeconds?: number): Promise<void> {
+  if (ttlSeconds) {
+    await _cmd(['set', key, value, 'EX', String(ttlSeconds)])
+  } else {
+    await _cmd(['set', key, value])
+  }
 }
 
 export async function kvGet(key: string): Promise<string | null> {
