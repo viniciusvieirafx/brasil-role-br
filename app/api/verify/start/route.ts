@@ -23,6 +23,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Username obrigatório' }, { status: 400 })
   }
 
+  // Reutiliza o código se o username for o mesmo (evita gerar código novo quando o antigo já tá na bio)
+  const existingData = cookieStore.get('verify_data')
+  if (existingData) {
+    try {
+      const parsed = JSON.parse(existingData.value)
+      if (parsed.vrchatUsername?.toLowerCase() === vrchatUsername.trim().toLowerCase() && parsed.code) {
+        return NextResponse.json({ code: parsed.code })
+      }
+    } catch {}
+  }
+
   const code = generateCode()
 
   cookieStore.set('verify_data', JSON.stringify({ vrchatUsername: vrchatUsername.trim(), code }), {
