@@ -9,6 +9,7 @@ const groups = [
   { name: 'Star Wars Brasil', image: '/grupos/StarWarsBrasil.png', url: 'https://vrchat.com/home/group/grp_5c7d683c-96dd-446c-926e-dfd712c4923b' },
   { name: "Moon's Club", image: '/grupos/MoonsClub.png', url: 'https://vrchat.com/home/group/grp_382c5e60-54a6-4cf6-ba8e-a3a894f2ac34' },
   { name: 'Guris do VRChat', image: '/grupos/GurisDoVRChat.png', url: 'https://vrchat.com/home/group/grp_0b84612c-ef64-4da5-bf79-d405b98b6d40' },
+  { name: 'Pipocas', image: '/grupos/Pipocas.png', url: 'https://vrchat.com/home/group/grp_56ac9783-10d6-4b81-8ff4-286108ef8021' },
 ]
 
 export default function VerifiedGroups() {
