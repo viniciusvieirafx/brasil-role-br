@@ -15,6 +15,10 @@
     {
       "path": "/api/cron/daily-auth",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/sync-gifter-roles",
+      "schedule": "0 */6 * * *"
     }
   ]
 }
