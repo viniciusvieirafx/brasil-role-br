@@ -108,7 +108,7 @@ export default function Team() {
         ))}
 
         {/* Moderadores abaixo */}
-        <div className="flex flex-wrap justify-center gap-6 reveal-stagger">
+        <div className="flex flex-nowrap justify-center gap-6 reveal-stagger">
           {members.filter(m => !m.owner).map((member) => (
             <div
               key={member.name}
