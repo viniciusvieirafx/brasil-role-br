@@ -44,6 +44,12 @@ const members: Member[] = [
     image: '/team/CoronelGilbert.png',
     discord: 'coronelgilbert',
   },
+  {
+    name: 'Artista',
+    role: 'mod',
+    image: '/team/Artista.png',
+    discord: 'artista_chan',
+  },
 ]
 
 export default function Team() {

@@ -1900,7 +1900,7 @@ export default function ControlePage() {
                 <label className="text-white/40 text-xs uppercase tracking-wider">Nome</label>
                 <input
                   value={gNome} onChange={e => setGNome(e.target.value)} required
-                  placeholder="Ex: DRAKHALEM"
+                  placeholder="Ex: Warhammer 40k Brasil"
                   className="bg-br-dark border border-white/15 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-br-yellow/50 w-44"
                 />
               </div>
