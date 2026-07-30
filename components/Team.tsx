@@ -73,22 +73,11 @@ export default function Team() {
           <p className="text-gray-400">{t.team.subtitle}</p>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-end justify-center gap-6 reveal-stagger">
-          {members.map((member) => (
-            <div
-              key={member.name}
-              className={`flex flex-col items-center text-center rounded-2xl border transition-all hover:-translate-y-2 group card-shimmer
-                ${member.owner
-                  ? 'bg-br-purple/70 border-br-yellow/50 px-10 py-10 w-64 animate-border-glow hover:-translate-y-3'
-                  : 'bg-br-purple/40 border-white/5 hover:border-br-yellow/30 px-8 py-8 w-52 hover:-translate-y-2'
-                }`}
-            >
-              <div className={`relative rounded-full overflow-hidden mb-4
-                ${member.owner
-                  ? 'w-28 h-28 ring-2 ring-br-yellow ring-offset-2 ring-offset-br-purple/70'
-                  : 'w-20 h-20 ring-2 ring-white/10 group-hover:ring-br-yellow/40 transition-all'
-                }`}
-              >
+        {/* Owner em destaque no topo */}
+        {members.filter(m => m.owner).map((member) => (
+          <div key={member.name} className="flex justify-center mb-10 reveal">
+            <div className="flex flex-col items-center text-center rounded-2xl border transition-all hover:-translate-y-3 group card-shimmer bg-br-purple/70 border-br-yellow/50 px-10 py-10 w-64 animate-border-glow">
+              <div className="relative rounded-full overflow-hidden mb-4 w-28 h-28 ring-2 ring-br-yellow ring-offset-2 ring-offset-br-purple/70">
                 {member.image ? (
                   <Image
                     src={member.image}
@@ -102,18 +91,47 @@ export default function Team() {
                   </div>
                 )}
               </div>
-
-              {member.owner && (
-                <span className="text-xs bg-br-yellow text-br-dark font-bold px-3 py-1 rounded-full mb-2 glow-yellow">
-                  {t.team.ownerBadge}
-                </span>
-              )}
-
-              <h3 className={`font-bold group-hover:text-br-yellow transition-colors duration-300
-                ${member.owner ? 'text-white text-xl' : 'text-white'}`}>
+              <span className="text-xs bg-br-yellow text-br-dark font-bold px-3 py-1 rounded-full mb-2 glow-yellow">
+                {t.team.ownerBadge}
+              </span>
+              <h3 className="font-bold text-white text-xl group-hover:text-br-yellow transition-colors duration-300">
                 {member.name}
               </h3>
-              <p className={`text-sm mt-1 ${member.owner ? 'text-br-yellow' : 'text-gray-400'}`}>
+              <p className="text-sm mt-1 text-br-yellow">
+                {roleLabel[member.role]}
+              </p>
+              {member.discord && (
+                <p className="text-gray-600 text-xs mt-2">@{member.discord}</p>
+              )}
+            </div>
+          </div>
+        ))}
+
+        {/* Moderadores abaixo */}
+        <div className="flex flex-wrap justify-center gap-6 reveal-stagger">
+          {members.filter(m => !m.owner).map((member) => (
+            <div
+              key={member.name}
+              className="flex flex-col items-center text-center rounded-2xl border transition-all group card-shimmer bg-br-purple/40 border-white/5 hover:border-br-yellow/30 px-8 py-8 w-52 hover:-translate-y-2"
+            >
+              <div className="relative rounded-full overflow-hidden mb-4 w-20 h-20 ring-2 ring-white/10 group-hover:ring-br-yellow/40 transition-all">
+                {member.image ? (
+                  <Image
+                    src={member.image}
+                    alt={member.name}
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-br-yellow to-br-green flex items-center justify-center text-2xl font-bold text-br-dark">
+                    {member.name[0]}
+                  </div>
+                )}
+              </div>
+              <h3 className="font-bold text-white group-hover:text-br-yellow transition-colors duration-300">
+                {member.name}
+              </h3>
+              <p className="text-sm mt-1 text-gray-400">
                 {roleLabel[member.role]}
               </p>
               {member.discord && (
