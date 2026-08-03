@@ -152,18 +152,12 @@ export default function Sorteio({ initialSorteio, initialParticipando, initialUs
                 <span>👥</span>
                 {total} {total === 1 ? 'participante' : 'participantes'}
               </div>
-              {sorteio.expiraEm && (() => {
-                const dias = daysUntil(sorteio.expiraEm)
-                return (
-                  <div className={`flex items-center gap-2 border rounded-full px-4 py-1.5 text-sm font-medium
-                    ${dias > 3 ? 'bg-blue-500/10 border-blue-500/30 text-blue-400'
-                      : dias > 0 ? 'bg-orange-500/10 border-orange-500/30 text-orange-400'
-                      : 'bg-red-500/10 border-red-500/30 text-red-400'}`}>
-                    <span>📅</span>
-                    {new Date(sorteio.expiraEm) > new Date() ? `Encerra em ${Math.max(dias, 0)}d — ${formatDatetime(sorteio.expiraEm)}` : `Encerrou — ${formatDatetime(sorteio.expiraEm)}`}
-                  </div>
-                )
-              })()}
+              {sorteio.expiraEm && (
+                <div className="flex items-center gap-2 border rounded-full px-4 py-1.5 text-sm font-medium bg-blue-500/10 border-blue-500/30 text-blue-400">
+                  <span>📅</span>
+                  Encerra — {formatDatetime(sorteio.expiraEm)}
+                </div>
+              )}
             </div>
 
             {/* Verification note */}
