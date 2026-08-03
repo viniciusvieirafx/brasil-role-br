@@ -36,13 +36,14 @@ export async function POST(req: NextRequest) {
   const modoResultado: 'igual' | 'colocacao' = sorteio.modoResultado ?? 'igual'
   const premio: string | null = sorteio.premio ?? null
   const premioDias: number = sorteio.premioDias ?? 30
+  const premioTier: number = [1, 2, 3].includes(sorteio.premioTier) ? sorteio.premioTier : 1
 
   if (premio === 'vip') {
-    await Promise.all(vencedores.map(v => concederVip(v.id, premioDias)))
+    await Promise.all(vencedores.map(v => concederVip(v.id, premioDias, premioTier)))
   }
 
   try {
-    await notificarVencedores(vencedores, premio, premioDias)
+    await notificarVencedores(vencedores, premio, premioDias, premioTier)
   } catch (e) {
     console.error('[sortear] Falha ao notificar vencedores por DM:', e)
   }
@@ -58,6 +59,7 @@ export async function POST(req: NextRequest) {
       modoResultado,
       premio,
       premioDias,
+      premioTier,
     )
   } catch (e) {
     console.error('[sortear] Falha ao enviar mensagem no Discord:', e)

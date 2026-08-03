@@ -63,6 +63,7 @@ type SorteioAdmin = {
   modoResultado: 'igual' | 'colocacao'
   premio: 'vip' | null
   premioDias: number
+  premioTier: number
   participantes: string[]
   participantesInfo: { id: string; isVip: boolean }[]
   criadoEm: string
@@ -196,8 +197,10 @@ export default function ControlePage() {
   const [sEditModoResultado, setSEditModoResultado]   = useState<'igual' | 'colocacao'>('igual')
   const [sPremio, setSPremio]                         = useState<'vip' | null>(null)
   const [sPremioDias, setSPremioDias]                 = useState(30)
+  const [sPremioTier, setSPremioTier]                 = useState<1 | 2 | 3>(1)
   const [sEditPremio, setSEditPremio]                 = useState<'vip' | null>(null)
   const [sEditPremioDias, setSEditPremioDias]         = useState(30)
+  const [sEditPremioTier, setSEditPremioTier]         = useState<1 | 2 | 3>(1)
 
   // ── Grupos ───────────────────────────────────────────────
   const [grupos, setGrupos]                 = useState<GrupoAdmin[]>([])
@@ -315,11 +318,12 @@ export default function ControlePage() {
         modoResultado:  sModoResultado,
         premio:         sPremio,
         premioDias:     sPremioDias,
+        premioTier:     sPremioTier,
       }),
     })
     if (res.ok) {
       setSTitulo(''); setSDescricao(''); setSExpiraEm(''); setSVipBonus(false); setSVipMult(3)
-      setSNumVencedores(1); setSModoResultado('igual'); setSPremio(null); setSPremioDias(30)
+      setSNumVencedores(1); setSModoResultado('igual'); setSPremio(null); setSPremioDias(30); setSPremioTier(1)
       await loadSorteio()
     } else {
       const d = await res.json()
@@ -357,6 +361,7 @@ export default function ControlePage() {
     setSEditModoResultado(sorteio.modoResultado ?? 'igual')
     setSEditPremio(sorteio.premio ?? null)
     setSEditPremioDias(sorteio.premioDias ?? 30)
+    setSEditPremioTier(([1, 2, 3] as const).includes(sorteio.premioTier as 1 | 2 | 3) ? sorteio.premioTier as 1 | 2 | 3 : 1)
     setSEditErr('')
     setSEditOpen(true)
   }
@@ -379,6 +384,7 @@ export default function ControlePage() {
         modoResultado:  sEditModoResultado,
         premio:         sEditPremio,
         premioDias:     sEditPremioDias,
+        premioTier:     sEditPremioTier,
       }),
     })
     if (res.ok) {
@@ -1356,18 +1362,39 @@ export default function ControlePage() {
                     </div>
 
                     {sEditPremio === 'vip' && (
-                      <div className="flex flex-col gap-1">
-                        <label className="text-xs text-white/40">Dias de VIP para os vencedores</label>
-                        <input
-                          type="number"
-                          min={1}
-                          max={365}
-                          value={sEditPremioDias}
-                          onChange={e => setSEditPremioDias(Math.max(1, parseInt(e.target.value) || 30))}
-                          className="bg-br-dark2 border border-white/15 rounded-lg px-3 py-2 text-sm text-white
-                                     focus:outline-none focus:border-br-yellow/50"
-                        />
-                      </div>
+                      <>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-xs text-white/40">Tier do VIP</label>
+                          <div className="flex gap-1">
+                            {([1, 2, 3] as const).map(t => (
+                              <button
+                                key={t}
+                                type="button"
+                                onClick={() => setSEditPremioTier(t)}
+                                className={`flex-1 text-sm py-2 rounded-lg font-medium transition-colors
+                                  ${sEditPremioTier === t
+                                    ? 'bg-br-yellow text-black'
+                                    : 'bg-br-dark2 border border-white/15 text-white/60 hover:border-white/30'
+                                  }`}
+                              >
+                                {t === 1 ? '🥉 Bronze' : t === 2 ? '🥈 Prata' : '🥇 Ouro'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-xs text-white/40">Dias de VIP para os vencedores</label>
+                          <input
+                            type="number"
+                            min={1}
+                            max={365}
+                            value={sEditPremioDias}
+                            onChange={e => setSEditPremioDias(Math.max(1, parseInt(e.target.value) || 30))}
+                            className="bg-br-dark2 border border-white/15 rounded-lg px-3 py-2 text-sm text-white
+                                       focus:outline-none focus:border-br-yellow/50"
+                          />
+                        </div>
+                      </>
                     )}
                   </div>
 
@@ -1605,19 +1632,40 @@ export default function ControlePage() {
                 </div>
 
                 {sPremio === 'vip' && (
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs text-white/40">Dias de VIP para os vencedores</label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={365}
-                      value={sPremioDias}
-                      onChange={e => setSPremioDias(Math.max(1, parseInt(e.target.value) || 30))}
-                      className="bg-br-dark border border-white/15 rounded-lg px-3 py-2 text-sm text-white
-                                 focus:outline-none focus:border-br-yellow/50"
-                    />
-                    <p className="text-xs text-white/30">VIP será concedido automaticamente ao sortear</p>
-                  </div>
+                  <>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs text-white/40">Tier do VIP</label>
+                      <div className="flex gap-1">
+                        {([1, 2, 3] as const).map(t => (
+                          <button
+                            key={t}
+                            type="button"
+                            onClick={() => setSPremioTier(t)}
+                            className={`flex-1 text-sm py-2 rounded-lg font-medium transition-colors
+                              ${sPremioTier === t
+                                ? 'bg-br-yellow text-black'
+                                : 'bg-br-dark border border-white/15 text-white/60 hover:border-white/30'
+                              }`}
+                          >
+                            {t === 1 ? '🥉 Bronze' : t === 2 ? '🥈 Prata' : '🥇 Ouro'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs text-white/40">Dias de VIP para os vencedores</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={365}
+                        value={sPremioDias}
+                        onChange={e => setSPremioDias(Math.max(1, parseInt(e.target.value) || 30))}
+                        className="bg-br-dark border border-white/15 rounded-lg px-3 py-2 text-sm text-white
+                                   focus:outline-none focus:border-br-yellow/50"
+                      />
+                      <p className="text-xs text-white/30">VIP será concedido automaticamente ao sortear</p>
+                    </div>
+                  </>
                 )}
               </div>
 

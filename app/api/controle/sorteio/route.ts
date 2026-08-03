@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
   const existing = await kvGet('sorteio:ativo')
   if (existing) return NextResponse.json({ error: 'Já existe um sorteio ativo. Encerre-o antes de criar um novo.' }, { status: 400 })
 
-  const { titulo, descricao, expiraEm, vipBonus, vipMultiplier, numVencedores, modoResultado, premio, premioDias } = await req.json()
+  const { titulo, descricao, expiraEm, vipBonus, vipMultiplier, numVencedores, modoResultado, premio, premioDias, premioTier } = await req.json()
   if (!titulo?.trim()) return NextResponse.json({ error: 'Título obrigatório' }, { status: 400 })
 
   const id = randomUUID()
@@ -96,6 +96,7 @@ export async function POST(req: NextRequest) {
     modoResultado: (modoResultado === 'colocacao' ? 'colocacao' : 'igual') as 'igual' | 'colocacao',
     premio: (premio === 'vip' ? 'vip' : null) as 'vip' | null,
     premioDias: Math.max(1, premioDias ?? 30),
+    premioTier: [1, 2, 3].includes(premioTier) ? premioTier : 1,
     participantes: [] as string[],
     criadoEm: new Date().toISOString(),
     sorteado: false,
@@ -126,7 +127,7 @@ export async function PATCH(req: NextRequest) {
   const sorteio = JSON.parse(raw)
   if (sorteio.sorteado) return NextResponse.json({ error: 'Não é possível editar um sorteio já sorteado' }, { status: 400 })
 
-  const { titulo, descricao, expiraEm, vipBonus, vipMultiplier, numVencedores, modoResultado, premio, premioDias } = await req.json()
+  const { titulo, descricao, expiraEm, vipBonus, vipMultiplier, numVencedores, modoResultado, premio, premioDias, premioTier } = await req.json()
   if (titulo !== undefined) sorteio.titulo = titulo.trim()
   if (descricao !== undefined) sorteio.descricao = descricao.trim()
   if (expiraEm !== undefined) sorteio.expiraEm = expiraEm || null
@@ -136,6 +137,7 @@ export async function PATCH(req: NextRequest) {
   if (modoResultado !== undefined) sorteio.modoResultado = modoResultado
   if (premio !== undefined) sorteio.premio = premio === 'vip' ? 'vip' : null
   if (premioDias !== undefined) sorteio.premioDias = Math.max(1, premioDias)
+  if (premioTier !== undefined) sorteio.premioTier = [1, 2, 3].includes(premioTier) ? premioTier : 1
 
   await kvSet(`sorteio:${aId}`, JSON.stringify(sorteio))
   return NextResponse.json({ ok: true })

@@ -77,6 +77,7 @@ export async function anunciarVencedores(
   modoResultado: 'igual' | 'colocacao',
   premio: string | null = null,
   premioDias = 0,
+  premioTier = 1,
 ) {
   const fields: { name: string; value: string; inline: boolean }[] = []
 
@@ -107,7 +108,8 @@ export async function anunciarVencedores(
   }
 
   if (premio === 'vip') {
-    fields.push({ name: '🎁 Prêmio', value: `**${premioDias} dias de VIP** já ativados!`, inline: true })
+    const tierLabel = TIER_LABELS[premioTier] ?? 'VIP'
+    fields.push({ name: '🎁 Prêmio', value: `**${premioDias} dias de ${tierLabel}** já ativados!`, inline: true })
   }
 
   fields.push({ name: '👥 Participantes', value: `${totalParticipantes} pessoas participaram`, inline: true })
@@ -200,12 +202,14 @@ export async function notificarVencedores(
   vencedores: Vencedor[],
   premio: string | null,
   premioDias: number,
+  premioTier: number = 1,
 ): Promise<void> {
   const siteUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://brasil-role-br.com'
+  const tierLabel = TIER_LABELS[premioTier] ?? 'VIP'
   for (const v of vencedores) {
     const msg = premio === 'vip'
       ? `🎉 **Parabéns ${v.nome}! Você ganhou o sorteio do Brasil Role BR!**\n\n` +
-        `Seu prêmio de **${premioDias} dias de VIP** já foi ativado automaticamente na sua conta! Aproveite todos os benefícios!\n\n` +
+        `Seu prêmio de **${premioDias} dias de ${tierLabel}** já foi ativado automaticamente na sua conta! Aproveite todos os benefícios!\n\n` +
         `🔗 ${siteUrl}\n\n` +
         `Obrigado por participar! 🇧🇷`
       : premio
