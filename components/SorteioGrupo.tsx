@@ -174,7 +174,7 @@ export default function SorteioGrupo({
                       : dias > 0 ? 'bg-orange-500/10 border-orange-500/30 text-orange-400'
                       : 'bg-red-500/10 border-red-500/30 text-red-400'}`}>
                     <span>📅</span>
-                    {dias > 0 ? `Encerra em ${dias}d — ${formatDatetime(sorteio.expiraEm)}` : `Encerrou — ${formatDatetime(sorteio.expiraEm)}`}
+                    {new Date(sorteio.expiraEm) > new Date() ? `Encerra em ${Math.max(dias, 0)}d — ${formatDatetime(sorteio.expiraEm)}` : `Encerrou — ${formatDatetime(sorteio.expiraEm)}`}
                   </div>
                 )
               })()}
