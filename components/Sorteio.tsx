@@ -38,6 +38,7 @@ function daysUntil(dateStr: string): number {
 
 function formatDatetime(iso: string): string {
   const d = new Date(iso)
+  if (isNaN(d.getTime())) return iso
   const pad = (n: number) => String(n).padStart(2, '0')
   const dia = pad(d.getDate())
   const mes = pad(d.getMonth() + 1)

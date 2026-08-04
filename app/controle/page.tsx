@@ -1254,8 +1254,9 @@ export default function ControlePage() {
                     <span className="bg-white/5 border border-white/10 rounded-full px-3 py-1 text-white/50">
                       📅 Encerra: {(() => {
                         const d = new Date(sorteio.expiraEm)
+                        if (isNaN(d.getTime())) return sorteio.expiraEm
                         const pad = (n: number) => String(n).padStart(2, '0')
-                        const temHora = sorteio.expiraEm.includes('T') && !(pad(d.getHours()) === '00' && pad(d.getMinutes()) === '00')
+                        const temHora = sorteio.expiraEm.includes('T') && !(pad(d.getUTCHours()) === '00' && pad(d.getUTCMinutes()) === '00')
                         return temHora
                           ? `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} às ${pad(d.getHours())}h${pad(d.getMinutes())}`
                           : `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`
