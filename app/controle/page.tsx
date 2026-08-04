@@ -342,6 +342,21 @@ export default function ControlePage() {
     setSortBusy(false)
   }
 
+  async function handleReativarSorteio() {
+    const novaData = prompt('Nova data de encerramento (YYYY-MM-DD) ou deixe vazio para manter:')
+    if (novaData === null) return
+    setSortBusy(true)
+    const res = await fetch('/api/controle/sorteio/reativar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expiraEm: novaData || undefined }),
+    })
+    const d = await res.json()
+    if (!res.ok) { alert(d.error ?? 'Erro ao reativar') }
+    await loadSorteio()
+    setSortBusy(false)
+  }
+
   async function handleDeleteSorteio() {
     if (!confirm('Encerrar e apagar o sorteio atual? Os dados serão perdidos.')) return
     setSDelBusy(true)
@@ -1455,6 +1470,17 @@ export default function ControlePage() {
                     ))}
                   </div>
                 </div>
+              )}
+
+              {/* Botão reativar */}
+              {sorteio.sorteado && (
+                <button
+                  onClick={handleReativarSorteio}
+                  disabled={sSortBusy}
+                  className="bg-green-600 text-white font-bold px-6 py-3 rounded-xl hover:brightness-110 transition-all disabled:opacity-50 w-full"
+                >
+                  {sSortBusy ? 'Reativando...' : '🔄 Reativar Sorteio'}
+                </button>
               )}
 
               {/* Botão sortear */}

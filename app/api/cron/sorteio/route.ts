@@ -22,7 +22,8 @@ export async function GET(req: NextRequest) {
   if (!sorteio.expiraEm) return NextResponse.json({ ok: true, msg: 'Sem data de encerramento automática' })
 
   const now = new Date()
-  const expira = new Date(sorteio.expiraEm)
+  // Usa fim do dia UTC (23:59:59) para não encerrar antes da hora
+  const expira = new Date(sorteio.expiraEm + 'T23:59:59Z')
   if (now < expira) return NextResponse.json({ ok: true, msg: 'Sorteio ainda não encerrou' })
 
   // Mark as drawn even if no participants to prevent repeated checks
@@ -84,7 +85,7 @@ export async function GET(req: NextRequest) {
       if (!sorteioGrupo || sorteioGrupo.sorteado) continue
       if (!sorteioGrupo.expiraEm) continue
 
-      const expira2 = new Date(sorteioGrupo.expiraEm)
+      const expira2 = new Date(sorteioGrupo.expiraEm + 'T23:59:59Z')
       if (now2 < expira2) continue
 
       if (sorteioGrupo.participantes.length === 0) {
