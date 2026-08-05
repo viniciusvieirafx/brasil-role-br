@@ -26,7 +26,10 @@ export async function POST(req: NextRequest) {
 
   sorteio.sorteado = false
   sorteio.vencedores = []
-  if (expiraEm) sorteio.expiraEm = expiraEm
+  if (expiraEm) {
+    const match = String(expiraEm).match(/^(\d{4}-\d{2}-\d{2})/)
+    if (match) sorteio.expiraEm = match[1]
+  }
 
   await kvSet(`sorteio:${aId}`, JSON.stringify(sorteio))
 

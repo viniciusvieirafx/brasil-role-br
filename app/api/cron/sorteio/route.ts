@@ -3,6 +3,15 @@ import { kvGet, kvSet } from '@/lib/kv'
 import { executarSorteio, anunciarVencedores, concederVip, notificarVencedores, anunciarVencedoresGrupo } from '@/lib/sorteio'
 import { listGrupos, getGrupoSorteioAtivo, saveGrupoSorteio, saveGrupo } from '@/lib/grupos'
 
+/** Extrai apenas YYYY-MM-DD de qualquer formato de data e retorna fim do dia UTC */
+function parseExpiraFimDoDia(expiraEm: string): Date | null {
+  // Pega só a parte da data (YYYY-MM-DD), ignorando qualquer sufixo de hora
+  const match = expiraEm.match(/^(\d{4}-\d{2}-\d{2})/)
+  if (!match) return null
+  const d = new Date(match[1] + 'T23:59:59Z')
+  return isNaN(d.getTime()) ? null : d
+}
+
 export async function GET(req: NextRequest) {
   const auth = req.headers.get('authorization')
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -22,9 +31,13 @@ export async function GET(req: NextRequest) {
   if (!sorteio.expiraEm) return NextResponse.json({ ok: true, msg: 'Sem data de encerramento automática' })
 
   const now = new Date()
-  // Usa fim do dia UTC (23:59:59) para não encerrar antes da hora
-  const expira = new Date(sorteio.expiraEm + 'T23:59:59Z')
-  if (now < expira) return NextResponse.json({ ok: true, msg: 'Sorteio ainda não encerrou' })
+  const expira = parseExpiraFimDoDia(sorteio.expiraEm)
+  // Se a data for inválida, NÃO sortear — retorna erro em vez de sortear prematuramente
+  if (!expira) {
+    console.error(`[cron/sorteio] Data de expiração inválida: "${sorteio.expiraEm}"`)
+    return NextResponse.json({ ok: false, msg: `Data de expiração inválida: ${sorteio.expiraEm}` })
+  }
+  if (now < expira) return NextResponse.json({ ok: true, msg: 'Sorteio ainda não encerrou', expiraEm: sorteio.expiraEm, expiraUtc: expira.toISOString() })
 
   // Mark as drawn even if no participants to prevent repeated checks
   if (sorteio.participantes.length === 0) {
@@ -85,8 +98,8 @@ export async function GET(req: NextRequest) {
       if (!sorteioGrupo || sorteioGrupo.sorteado) continue
       if (!sorteioGrupo.expiraEm) continue
 
-      const expira2 = new Date(sorteioGrupo.expiraEm + 'T23:59:59Z')
-      if (now2 < expira2) continue
+      const expira2 = parseExpiraFimDoDia(sorteioGrupo.expiraEm)
+      if (!expira2 || now2 < expira2) continue
 
       if (sorteioGrupo.participantes.length === 0) {
         sorteioGrupo.sorteado = true

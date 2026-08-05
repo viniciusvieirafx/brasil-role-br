@@ -84,12 +84,19 @@ export async function POST(req: NextRequest) {
   const { titulo, descricao, expiraEm, vipBonus, vipMultiplier, numVencedores, modoResultado, premio, premioDias, premioTier } = await req.json()
   if (!titulo?.trim()) return NextResponse.json({ error: 'Título obrigatório' }, { status: 400 })
 
+  // Garante que expiraEm é salvo apenas como YYYY-MM-DD
+  let expiraLimpo: string | null = null
+  if (expiraEm) {
+    const match = String(expiraEm).match(/^(\d{4}-\d{2}-\d{2})/)
+    expiraLimpo = match ? match[1] : null
+  }
+
   const id = randomUUID()
   const sorteio = {
     id,
     titulo: titulo.trim(),
     descricao: descricao?.trim() ?? '',
-    expiraEm: expiraEm || null,
+    expiraEm: expiraLimpo,
     vipBonus: vipBonus ?? false,
     vipMultiplier: vipMultiplier ?? 3,
     numVencedores: Math.max(1, numVencedores ?? 1),
@@ -130,7 +137,14 @@ export async function PATCH(req: NextRequest) {
   const { titulo, descricao, expiraEm, vipBonus, vipMultiplier, numVencedores, modoResultado, premio, premioDias, premioTier } = await req.json()
   if (titulo !== undefined) sorteio.titulo = titulo.trim()
   if (descricao !== undefined) sorteio.descricao = descricao.trim()
-  if (expiraEm !== undefined) sorteio.expiraEm = expiraEm || null
+  if (expiraEm !== undefined) {
+    if (expiraEm) {
+      const match = String(expiraEm).match(/^(\d{4}-\d{2}-\d{2})/)
+      sorteio.expiraEm = match ? match[1] : null
+    } else {
+      sorteio.expiraEm = null
+    }
+  }
   if (vipBonus !== undefined) sorteio.vipBonus = vipBonus
   if (vipMultiplier !== undefined) sorteio.vipMultiplier = vipMultiplier
   if (numVencedores !== undefined) sorteio.numVencedores = Math.max(1, numVencedores)
