@@ -21,3 +21,8 @@ out/
 *.tsbuildinfo
 next-env.d.ts
 
+
+# dados e segredos locais (repo publico)
+.env.vercel-check
+vip-backup-*.json
+Foto Moderador/
